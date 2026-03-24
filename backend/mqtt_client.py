@@ -1,10 +1,8 @@
 """
-mqtt_client.py - Non-blocking, auto-retrying MQTT subscriber (paho-mqtt 2.x).
+mqtt_client.py - V2 Backend MQTT Connection
 
-The client connects in a background daemon thread with automatic reconnection
-so start_mqtt() returns immediately and never blocks FastAPI startup.
-
-Topic: grid/data  |  Broker: test.mosquitto.org
+Handles subscriptions to simulated data and allows main.py to publish 
+the master time sync back to the simulator.
 """
 
 import json
@@ -16,79 +14,72 @@ import paho.mqtt.client as mqtt
 
 BROKER = "broker.hivemq.com"
 PORT = 1883
-TOPIC = "grid/data"
+TOPIC_DATA = "grid/data"
+TOPIC_SYNC = "grid/time_sync"
 MAX_RECORDS = 500
-RETRY_INTERVAL = 10  # seconds between reconnect attempts
+RETRY_INTERVAL = 10
 
 data_store: deque = deque(maxlen=MAX_RECORDS)
 _lock = threading.Lock()
 _connected = False
 
-
-# ── Callbacks (paho-mqtt 2.x / CallbackAPIVersion.VERSION2) ────────────────
+# We'll need a global client reference so main can publish
+_global_client = None
 
 def on_connect(client, userdata, flags, reason_code, properties):
     global _connected
     if reason_code == 0:
         _connected = True
-        print(f"[MQTT] Connected to {BROKER}. Subscribing to '{TOPIC}' …")
-        client.subscribe(TOPIC)
+        print(f"[MQTT] Connected to {BROKER}. Subscribing to '{TOPIC_DATA}' …")
+        client.subscribe(TOPIC_DATA)
     else:
         print(f"[MQTT] Connection refused – reason_code={reason_code}")
-
 
 def on_disconnect(client, userdata, flags, reason_code, properties):
     global _connected
     _connected = False
     print(f"[MQTT] Disconnected (reason_code={reason_code}).")
 
-
 def on_message(client, userdata, msg):
     try:
         payload = json.loads(msg.payload.decode("utf-8"))
-        with _lock:
-            data_store.append(payload)
-        print(f"[MQTT] Received: {payload}")
-    except json.JSONDecodeError as exc:
-        print(f"[MQTT] Bad payload ({exc}): {msg.payload}")
+        # Only store the V2 multi-entity payloads
+        if "loads" in payload:
+            with _lock:
+                data_store.append(payload)
+    except json.JSONDecodeError:
+        pass
 
-
-# ── Public helpers ──────────────────────────────────────────────────────────
-
-def get_recent(n: int = 20) -> list:
+def get_recent(n: int = 1) -> list:
     with _lock:
         return list(data_store)[-n:]
 
+def publish_time_sync(simulated_hour: float):
+    """Called by main loop to broadcast the master clock to the simulator."""
+    global _global_client, _connected
+    if _connected and _global_client:
+        payload = json.dumps({"simulated_hour": round(simulated_hour, 2)})
+        _global_client.publish(TOPIC_SYNC, payload)
 
-def get_loads() -> list:
-    with _lock:
-        return [r["load"] for r in data_store if "load" in r]
-
-
-# ── Resilient background connection ────────────────────────────────────────
 
 def _run_mqtt():
-    """Connect with automatic retry so transient network errors are handled."""
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    client.on_connect    = on_connect
-    client.on_disconnect = on_disconnect
-    client.on_message    = on_message
+    global _global_client
+    _global_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    _global_client.on_connect    = on_connect
+    _global_client.on_disconnect = on_disconnect
+    _global_client.on_message    = on_message
 
     while True:
         try:
             print(f"[MQTT] Connecting to {BROKER}:{PORT} …")
-            client.connect(BROKER, PORT, keepalive=60)
-            client.loop_forever()           # blocks until disconnect
-        except (OSError, TimeoutError, ConnectionRefusedError) as exc:
-            print(f"[MQTT] Could not connect ({exc}). Retrying in {RETRY_INTERVAL}s …")
-            time.sleep(RETRY_INTERVAL)
+            _global_client.connect(BROKER, PORT, keepalive=60)
+            _global_client.loop_forever()
         except Exception as exc:
-            print(f"[MQTT] Unexpected error ({exc}). Retrying in {RETRY_INTERVAL}s …")
+            print(f"[MQTT] Down ({exc}). Retrying in {RETRY_INTERVAL}s …")
             time.sleep(RETRY_INTERVAL)
 
 
 def start_mqtt() -> None:
-    """Spawn the MQTT client as a daemon thread. Returns immediately."""
     thread = threading.Thread(target=_run_mqtt, daemon=True, name="mqtt-listener")
     thread.start()
     print("[MQTT] Background listener thread started.")
