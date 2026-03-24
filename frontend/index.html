@@ -2,35 +2,63 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Syntaxed-IEGMS 3D Simulation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Syntaxed-IEGMS — AI Smart Grid Energy Management</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 </head>
 <body>
 
-  <!-- The 3D Canvas -->
-  <div id="canvas-container"></div>
+<!-- ═══════════════════════════════════════════════
+     TOPBAR — Navigation & Status
+═══════════════════════════════════════════════ -->
+<div class="topbar">
+  <div class="logo">
+    <span class="logo-icon">⚡</span>
+    <div class="logo-text">
+      SYNTAXED-IEGMS
+      <div class="logo-sub">AI Grid Orchestrator & DERMS</div>
+    </div>
+  </div>
+  <nav class="nav-tabs">
+    <button class="nav-tab active" onclick="showViewMode('visualization')">🎨 Visualization</button>
+    <button class="nav-tab" onclick="showPage('dashboard')">📊 Dashboard</button>
+    <button class="nav-tab" onclick="showPage('monitoring')">📡 IoT Monitoring</button>
+    <button class="nav-tab" onclick="showPage('forecast')">🤖 ML Forecast</button>
+    <button class="nav-tab" onclick="showPage('battery')">🔋 Battery</button>
+    <button class="nav-tab" onclick="showPage('control')">⚙️ Control</button>
+    <button class="nav-tab" onclick="showPage('simulation')">🎬 Simulation Model</button>
+  </nav>
+  <div class="topbar-right">
+    <div class="status-pill">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text">NORMAL</span>
+    </div>
+    <div class="time-display" id="time-display">06:00</div>
+  </div>
+</div>
 
-  <!-- 3D Floating Labels (Google Maps Style) -->
+<!-- ═══════════════════════════════════════════════
+     VIEW MODE 1: 3D VISUALIZATION
+═══════════════════════════════════════════════ -->
+<div id="view-visualization" class="view-mode active" style="display: flex; gap: 0;">
+  <!-- The 3D Canvas -->
+  <div id="canvas-container" style="flex: 1;"></div>
+
+  <!-- 3D Floating Labels -->
   <div id="labels-container">
-    <div class="map-label" id="label-hospital">🏥 Hospital Area</div>
-    <div class="map-label" id="label-school">🏫 Educational Inst.</div>
-    <div class="map-label" id="label-industry">🏭 Industrial Zone</div>
-    <div class="map-label" id="label-residential">🏘️ Residential Block</div>
-    <div class="map-label" id="label-battery">🔋 Grid Battery</div>
-    <div class="map-label" id="label-plant1">⚡ Power Plant 1</div>
-    <div class="map-label" id="label-plant2">⚡ Power Plant 2</div>
+    <div class="map-label" id="label-hospital">🏥 Hospital</div>
+    <div class="map-label" id="label-school">🏫 School</div>
+    <div class="map-label" id="label-industry">🏭 Industry</div>
+    <div class="map-label" id="label-residential">🏘️ Residential</div>
+    <div class="map-label" id="label-battery">🔋 Battery</div>
   </div>
 
-  <!-- UI Overlay -->
+  <!-- 3D UI Overlay -->
   <div id="ui-layer">
-    <header>
-      <h1>⚡ AI Grid Orchestrator</h1>
-      <p>Multi-Entity Priority Shedding & Battery Sim</p>
-    </header>
-
     <div class="panel time-panel">
-      <h3>Global Time Simulation (24m = 24h)</h3>
+      <h3>Time Control</h3>
       <div class="clock" id="clock-display">06:00</div>
       <input type="range" id="time-slider" min="0" max="23.9" step="0.1" value="6">
       <p class="subtext">Drag to time-travel</p>
@@ -39,23 +67,462 @@
     <div class="panel stats-panel">
       <h3>Grid Status: <span id="grid-status" class="status-normal">STABLE</span></h3>
       <div class="meter-row">
-        <span>Battery Reserve (<span id="batt-val">50</span> MW):</span>
+        <span>Battery (<span id="batt-val">50</span> MW):</span>
         <div class="meter-bg"><div class="meter-fill" id="batt-meter" style="width: 25%"></div></div>
       </div>
       <div class="meter-row mt-2">
-        <span>Current Demand (<span id="demand-val">0</span> / 900 MW max):</span>
-        <div class="meter-bg"><div class="meter-fill" id="demand-meter" style="width: 0%; background: #ef4444"></div></div>
+        <span>Demand (<span id="demand-val">0</span> / 900 MW):</span>
+        <div class="meter-bg"><div class="meter-fill" id="demand-meter" style="width: 0%;"></div></div>
+      </div>
+    </div>
+
+    <div class="panel activity-panel">
+      <h3>⏰ Zone Activities</h3>
+      <div id="activity-status">
+        <div>🏥 Hospital: <span id="act-hospital" class="act-active">Always ON</span></div>
+        <div>🏫 School: <span id="act-school" class="act-idle">Closed</span></div>
+        <div>🏭 Industry: <span id="act-industry" class="act-idle">Idle</span></div>
+        <div>🏘️ Residential: <span id="act-residential" class="act-idle">Sleeping</span></div>
       </div>
     </div>
 
     <div class="panel log-panel">
-      <h3>Orchestrator Action Log</h3>
+      <h3>Action Log</h3>
       <ul id="action-log">
-        <li>Waiting for orchestrator...</li>
+        <li>Ready...</li>
       </ul>
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- Zone Details Modal -->
+  <div id="zone-modal" class="zone-modal-overlay">
+    <div class="zone-modal">
+      <div class="zone-modal-header">
+        <h2 id="zone-title">Zone Details</h2>
+        <button class="zone-modal-close" onclick="closeZoneModal()">✕</button>
+      </div>
+      <div id="zone-modal-content" class="zone-modal-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     VIEW MODE 2: DASHBOARD PAGES
+═══════════════════════════════════════════════ -->
+<div id="dashboard-container" style="display: none; overflow-y: auto; height: calc(100vh - 60px);">
+
+  <!-- PAGE: DASHBOARD -->
+  <div class="page active" id="page-dashboard" style="padding: 20px;">
+    <div class="section-label">System Dashboard</div>
+    <div class="kpi-row" id="dashboard-kpi">
+      <div class="kpi-card">
+        <div class="kpi-label">Grid Demand</div>
+        <div class="kpi-value"><span id="kpi-demand">0</span> MW</div>
+        <div class="kpi-delta neutral" id="kpi-demand-delta">↔ 0%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Power Supplied</div>
+        <div class="kpi-value"><span id="kpi-supplied">0</span> MW</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Battery SoC</div>
+        <div class="kpi-value"><span id="kpi-soc">50</span>%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Grid Status</div>
+        <div class="kpi-value" id="kpi-status">NORMAL</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">📈 Load Profile (24h)</h3>
+        </div>
+        <div class="panel-body">
+          <canvas id="energyChart" height="200"></canvas>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">🔋 Battery SoC Trend</h3>
+        </div>
+        <div class="panel-body">
+          <canvas id="socChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">⚡ Energy Balance</h3>
+        </div>
+        <div class="panel-body">
+          <canvas id="mixChart" height="150"></canvas>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">📊 Load Breakdown by Zone</h3>
+        </div>
+        <div class="panel-body">
+          <div class="bar-row">
+            <div class="bar-item">
+              <div class="bar-meta"><span class="name">Hospital</span><span class="val" id="zone-hospital-load">0 MW</span></div>
+              <div class="bar-track"><div class="bar-fill" id="zone-hospital-bar" style="width: 0%"></div></div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-meta"><span class="name">School</span><span class="val" id="zone-school-load">0 MW</span></div>
+              <div class="bar-track"><div class="bar-fill" id="zone-school-bar" style="width: 0%"></div></div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-meta"><span class="name">Industry</span><span class="val" id="zone-industry-load">0 MW</span></div>
+              <div class="bar-track"><div class="bar-fill" id="zone-industry-bar" style="width: 0%"></div></div>
+            </div>
+            <div class="bar-item">
+              <div class="bar-meta"><span class="name">Residential</span><span class="val" id="zone-residential-load">0 MW</span></div>
+              <div class="bar-track"><div class="bar-fill" id="zone-residential-bar" style="width: 0%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: IOT MONITORING -->
+  <div class="page" id="page-monitoring" style="padding: 20px;">
+    <div class="section-label">IoT Sensor Network</div>
+    <div class="grid-2" style="margin-bottom: 16px;">
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">📡 Network Nodes</h3>
+        </div>
+        <div class="panel-body">
+          <canvas id="nodeMap" height="200"></canvas>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">🌡️ Sensor Data</h3>
+        </div>
+        <div class="panel-body">
+          <canvas id="sensorChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <h3 class="panel-title">📊 Device Status Table</h3>
+      </div>
+      <div class="panel-body">
+        <table id="device-table">
+          <thead>
+            <tr>
+              <th>Device ID</th>
+              <th>Zone</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Last Reading</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody id="device-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: ML FORECAST -->
+  <div class="page" id="page-forecast" style="padding: 20px;">
+    <div class="section-label">Machine Learning — Load Forecasting</div>
+    <div class="forecast-meta">
+      <div class="fm-card">
+        <div class="fm-label">Next Hour Forecast</div>
+        <div class="fm-value" id="forecast-next">125</div>
+        <div class="fm-sub">MW</div>
+      </div>
+      <div class="fm-card">
+        <div class="fm-label">Daily Peak Predicted</div>
+        <div class="fm-value" id="forecast-peak">280</div>
+        <div class="fm-sub">MW</div>
+      </div>
+      <div class="fm-card">
+        <div class="fm-label">Model Accuracy</div>
+        <div class="fm-value" id="forecast-accuracy">94.2</div>
+        <div class="fm-sub">%</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">🎯 24h Load Forecast</h3>
+        </div>
+        <div class="panel-body">
+          <canvas id="forecastChart" height="200"></canvas>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">📉 Forecast Error Analysis</h3>
+        </div>
+        <div class="panel-body">
+          <canvas id="errorChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: BATTERY MANAGEMENT -->
+  <div class="page" id="page-battery" style="padding: 20px;">
+    <div class="section-label">Battery Energy Storage System (BESS)</div>
+    <div class="grid-3" style="align-items: start; margin-bottom: 16px;">
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">🔋 State of Charge</h3>
+        </div>
+        <div class="panel-body">
+          <div class="battery-container">
+            <div class="battery-outer">
+              <div class="battery-fill" id="battery-visual" style="width: 50%;"></div>
+            </div>
+            <div class="battery-pct" id="battery-pct-text">50%</div>
+            <div class="battery-label">Energy: <span id="battery-energy">100</span> MWh</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">⚙️ Battery Status</h3>
+        </div>
+        <div class="panel-body">
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Charge Rate</span><span class="val" id="battery-charge">0 MW</span></div>
+            <div class="bar-track"><div class="bar-fill" id="battery-charge-bar"></div></div>
+          </div>
+          <div class="bar-item" style="margin-top: 12px;">
+            <div class="bar-meta"><span class="name">Discharge Rate</span><span class="val" id="battery-discharge">0 MW</span></div>
+            <div class="bar-track"><div class="bar-fill" id="battery-discharge-bar"></div></div>
+          </div>
+          <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(0,212,255,0.1);">
+            <div style="font-size: 13px; color: var(--text2); margin-bottom: 8px;">Health: <span id="battery-health">98</span>%</div>
+            <div style="font-size: 13px; color: var(--text2);">Cycles: <span id="battery-cycles">245</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">💡 Usage Mode</h3>
+        </div>
+        <div class="panel-body">
+          <div id="battery-mode" style="font-size: 24px; font-weight: bold; color: var(--cyan); margin-bottom: 12px;">IDLE</div>
+          <div style="font-size: 12px; color: var(--text2); line-height: 1.6;">
+            <div>⏱️ Time to Full: <span id="battery-ttf">4h 30m</span></div>
+            <div style="margin-top: 8px;">📈 Ideal Peak Shaving Time: 18:00 - 21:00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">📊 Weekly Discharge Pattern</h3>
+        </div>
+        <div class="panel-body">
+          <canvas id="weeklyChart" height="150"></canvas>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">⚡ Peak Shaving Savings</h3>
+        </div>
+        <div class="panel-body">
+          <canvas id="savingsChart" height="150"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: CONTROL CENTER -->
+  <div class="page" id="page-control" style="padding: 20px;">
+    <div class="section-label">Optimization & Control Center</div>
+    
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">🎮 Grid Control Mode</h3>
+        </div>
+        <div class="panel-body">
+          <div class="ctrl-row">
+            <button class="ctrl-btn green" onclick="setMode('manual')">🖐️ Manual</button>
+            <button class="ctrl-btn" onclick="setMode('auto')">🤖 Auto</button>
+            <button class="ctrl-btn" onclick="setMode('eco')">🌱 Eco</button>
+          </div>
+          <div style="margin-top: 16px; font-size: 12px; color: var(--text2);">
+            Current Mode: <span id="current-mode" style="color: var(--cyan);">AUTO</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">⚠️ Load Shedding Control</h3>
+        </div>
+        <div class="panel-body">
+          <div class="range-group">
+            <label>Shed Threshold (% max demand)</label>
+            <input type="range" id="shed-threshold" min="0" max="100" value="95" onchange="updateShedThreshold(this.value)">
+            <div style="text-align: right; font-size: 12px; color: var(--cyan);" id="shed-value">95%</div>
+          </div>
+          <div style="margin-top: 16px;">
+            <label style="font-size: 12px; color: var(--text2);">Priority Order:</label>
+            <div style="font-size: 11px; color: var(--text2); margin-top: 6px; line-height: 1.8;">
+              <div>1️⃣ Hospital (Critical)</div>
+              <div>2️⃣ School (High)</div>
+              <div>3️⃣ Industry (Medium)</div>
+              <div>4️⃣ Residential (Low)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">📅 Scheduled Events</h3>
+        </div>
+        <div class="panel-body">
+          <table id="schedule-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>Zone</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="schedule-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">🎯 Active Alerts</h3>
+        </div>
+        <div class="panel-body">
+          <div class="alert-list" id="alerts-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: SIMULATION MODEL -->
+  <div class="page" id="page-simulation" style="padding: 20px;">
+    <div class="section-label">Simulation & Zone Testing Model</div>
+    
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">🎬 Global Simulation Controls</h3>
+        </div>
+        <div class="panel-body">
+          <div class="range-group">
+            <label>Simulation Time (Hour of Day)</label>
+            <input type="range" id="sim-time" min="0" max="23.9" step="0.1" value="6" onchange="setSimulationTime(this.value)">
+            <div style="text-align: center; font-size: 20px; font-weight: bold; color: var(--cyan); margin-top: 10px;" id="sim-time-display">06:00</div>
+          </div>
+          <div style="margin-top: 16px;">
+            <button class="ctrl-btn green" onclick="playSimulation()">▶️ Play</button>
+            <button class="ctrl-btn amber" onclick="pauseSimulation()">⏸️ Pause</button>
+            <button class="ctrl-btn red" onclick="resetSimulation()">🔄 Reset</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">📈 Simulation Speed</h3>
+        </div>
+        <div class="panel-body">
+          <div class="range-group">
+            <label>Speed Multiplier</label>
+            <input type="range" id="sim-speed" min="1" max="10" step="1" value="1" onchange="updateSimSpeed(this.value)">
+            <div style="text-align: center; font-size: 14px; color: var(--text2);" id="sim-speed-display">1x Normal</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top: 24px;">Zone Fault Injection & Testing</div>
+    
+    <div class="grid-3b">
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">🏥 Hospital Zone Test</h3>
+        </div>
+        <div class="panel-body">
+          <div class="ctrl-row" style="flex-direction: column; gap: 8px;">
+            <button class="ctrl-btn" onclick="simulateZoneFault('hospital')">⚡ Simulate Load Spike (+50%)</button>
+            <button class="ctrl-btn red" onclick="simulateZoneBlackout('hospital')">🔴 Trigger Blackout</button>
+            <button class="ctrl-btn green" onclick="resetZone('hospital')">✓ Reset</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">🏫 School Zone Test</h3>
+        </div>
+        <div class="panel-body">
+          <div class="ctrl-row" style="flex-direction: column; gap: 8px;">
+            <button class="ctrl-btn" onclick="simulateZoneFault('school')">⚡ Simulate Load Spike (+50%)</button>
+            <button class="ctrl-btn red" onclick="simulateZoneBlackout('school')">🔴 Trigger Blackout</button>
+            <button class="ctrl-btn green" onclick="resetZone('school')">✓ Reset</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">🏭 Industry Zone Test</h3>
+        </div>
+        <div class="panel-body">
+          <div class="ctrl-row" style="flex-direction: column; gap: 8px;">
+            <button class="ctrl-btn" onclick="simulateZoneFault('industry')">⚡ Simulate Load Spike (+50%)</button>
+            <button class="ctrl-btn red" onclick="simulateZoneBlackout('industry')">🔴 Trigger Blackout</button>
+            <button class="ctrl-btn green" onclick="resetZone('industry')">✓ Reset</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 class="panel-title">🏘️ Residential Zone Test</h3>
+        </div>
+        <div class="panel-body">
+          <div class="ctrl-row" style="flex-direction: column; gap: 8px;">
+            <button class="ctrl-btn" onclick="simulateZoneFault('residential')">⚡ Simulate Load Spike (+50%)</button>
+            <button class="ctrl-btn red" onclick="simulateZoneBlackout('residential')">🔴 Trigger Blackout</button>
+            <button class="ctrl-btn green" onclick="resetZone('residential')">✓ Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top: 16px;">
+      <div class="panel-header">
+        <h3 class="panel-title">📊 Real-Time Simulation Metrics</h3>
+      </div>
+      <div class="panel-body">
+        <canvas id="peakChart" height="150"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     HIDDEN CONTAINERS FOR CHART CONTEXTS
+═══════════════════════════════════════════════ -->
+
+<script src="app.js"></script>
 </body>
 </html>
