@@ -984,5 +984,291 @@ window.addEventListener('load',()=>{
   simulate();
 });
 </script>
+<script>
+(function () {
+  const DASHBOARD_API = (() => {
+    const { protocol, hostname } = window.location;
+    if (!hostname) return 'http://localhost:8000';
+    return `${protocol}//${hostname}:8000`;
+  })();
+
+  function safeNum(v, fallback = 0) {
+    return Number.isFinite(v) ? v : fallback;
+  }
+
+  function sumLoads(loads) {
+    return Object.values(loads || {}).reduce((acc, v) => acc + safeNum(v), 0);
+  }
+
+  function timeAgo(iso) {
+    if (!iso) return '--';
+    const diff = Math.max(0, Date.now() - new Date(iso).getTime());
+    const secs = Math.round(diff / 1000);
+    if (secs < 60) return `${secs}s ago`;
+    const mins = Math.round(secs / 60);
+    if (mins < 60) return `${mins}m ago`;
+    return `${Math.round(mins / 60)}h ago`;
+  }
+
+  function setTextSafe(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function setBarSafe(id, pct) {
+    const el = document.getElementById(id);
+    if (el) el.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  }
+
+  function updateDeviceTable(readings, optimize) {
+    const el = document.getElementById('device-table');
+    if (!el) return;
+    const latest = readings.length ? readings[readings.length - 1] : null;
+    const lastSeen = latest?.timestamp ? timeAgo(latest.timestamp) : '--';
+    const rows = [
+      ['HOSPITAL', 'Hospital Meter', 'MQTT', latest ? 'Online' : 'Waiting', lastSeen],
+      ['SCHOOL', 'School Meter', 'MQTT', latest ? 'Online' : 'Waiting', lastSeen],
+      ['INDUSTRY', 'Industrial Meter', 'MQTT', latest ? 'Online' : 'Waiting', lastSeen],
+      ['RESIDENTIAL', 'Residential Meter', 'MQTT', latest ? 'Online' : 'Waiting', lastSeen],
+      ['BESS', 'Battery Controller', 'HTTP', optimize ? 'Online' : 'Waiting', lastSeen]
+    ];
+    el.innerHTML = rows.map(r => `<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td class="mono" style="color:var(--cyan)">${r[2]}</td><td><span style="color:${r[3] === 'Online' ? 'var(--green)' : 'var(--amber)'};font-size:12px">${r[3]}</span></td><td class="mono" style="color:var(--text2)">${r[4]}</td></tr>`).join('');
+  }
+
+  function updateHeatmap(loadHistory) {
+    const el = document.getElementById('heatmap');
+    if (!el) return;
+    const vals = loadHistory.map(v => safeNum(v));
+    const max = Math.max(1, ...vals);
+    el.innerHTML = vals.map(v => {
+      const ratio = v / max;
+      const g = Math.round(ratio * 212);
+      const b = Math.round(255 - (ratio * 130));
+      return `<div class="hm-cell" title="${Math.round(v)} kW" style="background:rgba(0,${g},${b},${0.2 + ratio * 0.8})"></div>`;
+    }).join('');
+  }
+
+  function updateSchedule(optimize) {
+    const el = document.getElementById('schedule-table');
+    if (!el) return;
+    const delta = safeNum(optimize?.battery_delta);
+    const rows = [
+      ['Current', delta > 0 ? 'Charge' : delta < 0 ? 'Discharge' : 'Idle', `${delta.toFixed(1)} MW`, optimize?.status_code || 'Waiting'],
+      ['Hospital', 'Supply', `${safeNum(optimize?.supplied?.hospital).toFixed(1)} MW`, 'Priority critical'],
+      ['School', 'Supply', `${safeNum(optimize?.supplied?.school).toFixed(1)} MW`, 'Priority high'],
+      ['Industry', 'Supply', `${safeNum(optimize?.supplied?.industry).toFixed(1)} MW`, 'Priority medium'],
+      ['Residential', 'Supply', `${safeNum(optimize?.supplied?.residential).toFixed(1)} MW`, 'Priority low']
+    ];
+    el.innerHTML = rows.map(r => `<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td class="mono">${r[2]}</td><td style="color:var(--text2);font-size:12px">${r[3]}</td></tr>`).join('');
+  }
+
+  function updateAlerts(optimize) {
+    if (typeof renderAlerts !== 'function' || !window.alertsData) return;
+    const next = optimize?.actions?.length
+      ? optimize.actions.slice(0, 4).map(msg => ({
+          type: /CRITICAL|Cannot shed/i.test(msg) ? 'error' : /Shedding|Discharging/i.test(msg) ? 'warn' : 'success',
+          icon: /CRITICAL|Cannot shed/i.test(msg) ? 'ERR' : /Shedding|Discharging/i.test(msg) ? 'WARN' : 'OK',
+          msg
+        }))
+      : [{ type: 'info', icon: 'INFO', msg: 'Waiting for live backend data' }];
+    window.alertsData.splice(0, window.alertsData.length, ...next);
+    renderAlerts();
+  }
+
+  function updateNodeMap(optimize, soc) {
+    const canvas = document.getElementById('nodeMap');
+    if (!canvas) return;
+    const c = canvas.getContext('2d');
+    canvas.width = canvas.clientWidth || 600;
+    canvas.height = 220;
+    const w = canvas.width;
+    const h = canvas.height;
+    c.fillStyle = '#091428';
+    c.fillRect(0, 0, w, h);
+    c.strokeStyle = 'rgba(0,212,255,0.05)';
+    for (let x = 0; x < w; x += 40) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke(); }
+    for (let y = 0; y < h; y += 40) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+
+    const nodes = [
+      { x: 0.14, y: 0.30, id: 'Hospital', val: `${safeNum(optimize?.demand?.hospital).toFixed(0)} MW`, color: '#00d4ff' },
+      { x: 0.34, y: 0.18, id: 'School', val: `${safeNum(optimize?.demand?.school).toFixed(0)} MW`, color: '#00ff88' },
+      { x: 0.54, y: 0.52, id: 'BESS', val: `${Math.round(soc)}% SoC`, color: '#ffb800' },
+      { x: 0.72, y: 0.28, id: 'Industry', val: `${safeNum(optimize?.demand?.industry).toFixed(0)} MW`, color: '#00d4ff' },
+      { x: 0.84, y: 0.56, id: 'Residential', val: `${safeNum(optimize?.demand?.residential).toFixed(0)} MW`, color: '#00ff88' }
+    ];
+
+    c.strokeStyle = 'rgba(0,212,255,0.20)';
+    for (let i = 0; i < nodes.length - 1; i += 1) {
+      c.beginPath();
+      c.moveTo(nodes[i].x * w, nodes[i].y * h);
+      c.lineTo(nodes[i + 1].x * w, nodes[i + 1].y * h);
+      c.stroke();
+    }
+
+    nodes.forEach(node => {
+      const nx = node.x * w;
+      const ny = node.y * h;
+      c.beginPath();
+      c.arc(nx, ny, 12, 0, Math.PI * 2);
+      c.fillStyle = `${node.color}33`;
+      c.fill();
+      c.strokeStyle = node.color;
+      c.lineWidth = 2;
+      c.stroke();
+      c.fillStyle = '#fff';
+      c.font = 'bold 10px JetBrains Mono';
+      c.textAlign = 'center';
+      c.fillText(node.id, nx, ny + 24);
+      c.fillStyle = node.color;
+      c.font = '10px JetBrains Mono';
+      c.fillText(node.val, nx, ny + 36);
+    });
+  }
+
+  function updateCharts(optimize, readings) {
+    const latest = readings.length ? readings[readings.length - 1] : null;
+    const predicted = optimize?.predicted_loads || {};
+    const simulatedHour = safeNum(optimize?.simulated_hour, latest?.simulated_hour, new Date().getHours());
+    const hour = Math.floor(simulatedHour) % 24;
+    const totalDemand = safeNum(optimize?.total_demand, sumLoads(latest?.loads));
+    const solarProxy = Math.max(0, Math.min(totalDemand, safeNum(predicted.school) + safeNum(predicted.industry) * 0.15));
+    const soc = Math.max(0, Math.min(100, safeNum(optimize?.battery_energy) / 4));
+    const charging = safeNum(optimize?.battery_delta) > 0;
+
+    if (window.state) {
+      window.state.load = totalDemand;
+      window.state.solar = solarProxy;
+      window.state.soc = soc;
+      window.state.charging = charging;
+      window.state.loadHistory[hour] = totalDemand;
+      window.state.solarHistory[hour] = solarProxy;
+      window.state.socHistory[hour] = soc;
+    }
+
+    const batteryOut = Math.max(0, -safeNum(optimize?.battery_delta));
+    const gridImport = Math.max(0, totalDemand - solarProxy - batteryOut);
+    const totalFlow = Math.max(1, solarProxy + batteryOut + gridImport);
+
+    setTextSafe('kpi-load', Math.round(totalDemand));
+    setTextSafe('kpi-solar', Math.round(solarProxy));
+    setTextSafe('kpi-soc', Math.round(soc));
+    setTextSafe('kpi-shaved', Math.round(Math.max(0, totalDemand - safeNum(optimize?.total_supplied, totalDemand))));
+    setTextSafe('kpi-co2', (solarProxy * 0.0075).toFixed(1));
+    setTextSafe('fn-solar-v', `${Math.round(solarProxy)} kW`);
+    setTextSafe('fn-bms-v', `${Math.round(soc)}%`);
+    setTextSafe('fn-grid-v', `${Math.round(totalDemand)} kW`);
+    setTextSafe('ctrl-volt', `${safeNum(window.state?.voltage, 231).toFixed(0)} V`);
+    setTextSafe('ctrl-freq', `${safeNum(window.state?.frequency, 50.02).toFixed(2)} Hz`);
+    setTextSafe('ctrl-pf', safeNum(window.state?.pf, 0.97).toFixed(2));
+    setTextSafe('mqtt-rate', String(Math.max(0, Math.round(readings.length / 2))));
+    setTextSafe('edge-lat', latest?.timestamp ? timeAgo(latest.timestamp) : '--');
+    setTextSafe('batt-temp', '--');
+    setTextSafe('mix-solar', `${Math.round(solarProxy)} kW`);
+    setTextSafe('mix-batt', `${Math.round(batteryOut)} kW`);
+    setTextSafe('mix-grid', `${Math.round(gridImport)} kW`);
+
+    setBarSafe('bar-solar', (solarProxy / totalFlow) * 100);
+    setBarSafe('bar-batt', (batteryOut / totalFlow) * 100);
+    setBarSafe('bar-grid', (gridImport / totalFlow) * 100);
+    setBarSafe('bar-mqtt', Math.min(100, readings.length * 5));
+    setBarSafe('bar-lat', latest?.timestamp ? Math.min(100, (Date.now() - new Date(latest.timestamp).getTime()) / 1000) : 0);
+    setBarSafe('bar-temp', 0);
+    setBarSafe('bar-volt', Math.min(100, (safeNum(window.state?.voltage, 231) - 220) / 20 * 100));
+    setBarSafe('bar-freq', Math.min(100, (safeNum(window.state?.frequency, 50.02) - 49.5) * 100));
+
+    const fill = document.getElementById('battery-fill');
+    if (fill) {
+      fill.style.height = `${soc}%`;
+      fill.className = `battery-fill ${soc > 50 ? 'soc-high' : soc > 25 ? 'soc-mid' : 'soc-low'}`;
+    }
+    setTextSafe('soc-pct', Math.round(soc));
+    setTextSafe('soc-status', charging ? 'CHARGING' : soc < 20 ? 'LOW' : 'IDLE');
+
+    if (window.charts?.energy) {
+      window.charts.energy.data.datasets[0].data = [...window.state.loadHistory];
+      window.charts.energy.data.datasets[1].data = [...window.state.solarHistory];
+      window.charts.energy.update('none');
+    }
+    if (window.charts?.mix) {
+      window.charts.mix.data.datasets[0].data = [Math.round(solarProxy), Math.round(batteryOut), Math.round(gridImport)];
+      window.charts.mix.update('none');
+    }
+    if (window.charts?.today) {
+      const forecastSeries = window.state.loadHistory.map((value, index) => index === hour ? sumLoads(predicted) : value);
+      window.charts.today.data.datasets[0].data = [...window.state.loadHistory];
+      window.charts.today.data.datasets[1].data = forecastSeries;
+      window.charts.today.update('none');
+    }
+    if (window.charts?.sensor) {
+      const rows = readings.slice(-60);
+      window.charts.sensor.data.labels = rows.map((_, i) => i + 1);
+      window.charts.sensor.data.datasets[0].data = rows.map(r => safeNum(r.loads?.hospital));
+      window.charts.sensor.data.datasets[1].data = rows.map(r => safeNum(r.loads?.school));
+      window.charts.sensor.data.datasets[2].data = rows.map(r => safeNum(r.loads?.industry));
+      window.charts.sensor.data.datasets[0].label = 'Hospital (kW)';
+      window.charts.sensor.data.datasets[1].label = 'School (kW)';
+      window.charts.sensor.data.datasets[2].label = 'Industry (kW)';
+      window.charts.sensor.update('none');
+    }
+    if (window.charts?.soc) {
+      window.charts.soc.data.datasets[0].data = [...window.state.socHistory];
+      window.charts.soc.update('none');
+    }
+    if (window.charts?.cell) {
+      window.charts.cell.data.labels = ['Charge', 'Discharge', 'Energy', 'Reserve'];
+      window.charts.cell.data.datasets[0].data = [
+        Math.max(0, safeNum(optimize?.battery_delta)),
+        Math.max(0, -safeNum(optimize?.battery_delta)),
+        safeNum(optimize?.battery_energy),
+        Math.round(soc * 4)
+      ];
+      window.charts.cell.update('none');
+    }
+    if (window.charts?.peak) {
+      window.charts.peak.data.datasets[0].data = [...window.state.loadHistory];
+      window.charts.peak.data.datasets[1].data = window.state.loadHistory.map(v => Math.min(v, 850));
+      window.charts.peak.update('none');
+    }
+    if (window.charts?.savings) {
+      window.charts.savings.data.datasets[0].data = [Math.max(0, safeNum(optimize?.battery_delta)), Math.max(0, -safeNum(optimize?.battery_delta)), Math.max(0, totalDemand - safeNum(optimize?.total_supplied, totalDemand)), Math.max(0, safeNum(optimize?.total_supplied))];
+      window.charts.savings.update('none');
+    }
+
+    updateHeatmap(window.state?.loadHistory || Array(24).fill(0));
+    updateSchedule(optimize);
+    updateDeviceTable(readings, optimize);
+    updateAlerts(optimize);
+    updateNodeMap(optimize, soc);
+  }
+
+  async function refreshFromBackend() {
+    try {
+      const [optRes, dataRes] = await Promise.all([
+        fetch(`${DASHBOARD_API}/optimize`),
+        fetch(`${DASHBOARD_API}/data`)
+      ]);
+      if (!optRes.ok || !dataRes.ok) return;
+      const optimize = await optRes.json();
+      const dataPayload = await dataRes.json();
+      const readings = Array.isArray(dataPayload.readings) ? dataPayload.readings : [];
+      updateCharts(optimize, readings);
+    } catch (_err) {}
+  }
+
+  window.addEventListener('load', () => {
+    if (typeof window.simInterval !== 'undefined' && window.simInterval) {
+      clearInterval(window.simInterval);
+    }
+    window.simulate = function () {};
+    setTimeout(() => {
+      if (typeof window.simInterval !== 'undefined' && window.simInterval) {
+        clearInterval(window.simInterval);
+      }
+      refreshFromBackend();
+      window.liveBackendInterval = setInterval(refreshFromBackend, 2000);
+    }, 100);
+  });
+})();
+</script>
 </body>
 </html>
