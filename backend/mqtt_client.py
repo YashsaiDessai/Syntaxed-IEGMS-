@@ -14,8 +14,8 @@ import paho.mqtt.client as mqtt
 
 BROKER = "broker.hivemq.com"
 PORT = 1883
-TOPIC_DATA = "grid/data"
-TOPIC_SYNC = "grid/time_sync"
+TOPIC_DATA = "iegms/syntaxed/grid/data"
+TOPIC_SYNC = "iegms/syntaxed/grid/time_sync"
 MAX_RECORDS = 500
 RETRY_INTERVAL = 10
 

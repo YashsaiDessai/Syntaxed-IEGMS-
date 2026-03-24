@@ -15,11 +15,11 @@ PROFILES = {
     },
     "school": {
         # Flattish night, peaks during school hours (08:00 - 15:00)
-        0: 10, 6: 15, 8: 90, 12: 110, 15: 85, 18: 20, 24: 10
+        0: 1, 6: 5, 8: 90, 12: 110, 15: 85, 18: 15, 24: 1
     },
     "industry": {
         # Factory shifts 06:00 to 18:00
-        0: 30, 5: 35, 7: 150, 12: 160, 17: 140, 19: 50, 24: 30
+        0: 5, 5: 15, 7: 150, 12: 160, 17: 140, 19: 30, 24: 5
     },
     "residential": {
         # Morning bump, huge evening peak

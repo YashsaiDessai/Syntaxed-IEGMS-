@@ -17,8 +17,8 @@ import paho.mqtt.client as mqtt
 
 BROKER = "broker.hivemq.com"
 PORT = 1883
-TOPIC_PUB = "grid/data"
-TOPIC_SYNC = "grid/time_sync"
+TOPIC_PUB = "iegms/syntaxed/grid/data"
+TOPIC_SYNC = "iegms/syntaxed/grid/time_sync"
 PUBLISH_INTERVAL = 2  # seconds
 
 # Global simulated time in hours (0.0 to 24.0)
@@ -28,8 +28,8 @@ _lock = threading.Lock()
 # Define the base curves so the simulator generates realistic noise around the expected ML value
 PROFILES = {
     "hospital": {0: 80, 6: 85, 12: 100, 18: 95, 24: 80},
-    "school": {0: 10, 6: 15, 8: 90, 12: 110, 15: 85, 18: 20, 24: 10},
-    "industry": {0: 30, 5: 35, 7: 150, 12: 160, 17: 140, 19: 50, 24: 30},
+    "school": {0: 1, 6: 5, 8: 90, 12: 110, 15: 85, 18: 15, 24: 1},
+    "industry": {0: 5, 5: 15, 7: 150, 12: 160, 17: 140, 19: 30, 24: 5},
     "residential": {0: 40, 6: 70, 9: 50, 15: 60, 18: 150, 21: 180, 24: 40}
 }
 

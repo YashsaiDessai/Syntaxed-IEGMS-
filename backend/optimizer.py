@@ -6,9 +6,9 @@ Entities priority: Hospital > School > Industry > Residential.
 """
 
 # Grid constraints (MW)
-MAX_GRID_CAPACITY = 350.0  
-BATTERY_MAX_CHARGE = 200.0
-BATTERY_MAX_RATE = 50.0  # Max charge/discharge per iteration
+MAX_GRID_CAPACITY = 900.0  
+BATTERY_MAX_CHARGE = 400.0
+BATTERY_MAX_RATE = 100.0  # Max charge/discharge per iteration
 
 PRIORITY = ["hospital", "school", "industry", "residential"]
 

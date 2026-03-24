@@ -233,6 +233,38 @@ attachWindows(battMesh, 6, 6, 6, matWinBatt, "battery"); // re-using tracking bu
 scene.add(battMesh);
 addLabel('label-battery', -8, 10, -2);
 
+// 6. POWER PLANTS (Generation)
+const plantMat = new THREE.MeshStandardMaterial({ color: 0x64748b });
+const pp1 = new THREE.Mesh(new THREE.CylinderGeometry(3, 5, 12), plantMat);
+pp1.position.set(-35, 6, 35);
+pp1.castShadow = true; pp1.receiveShadow = true;
+scene.add(pp1);
+addLabel('label-plant1', -35, 15, 35);
+
+const pp2 = new THREE.Mesh(new THREE.CylinderGeometry(3, 5, 12), plantMat);
+pp2.position.set(-25, 6, 42);
+pp2.castShadow = true; pp2.receiveShadow = true;
+scene.add(pp2);
+addLabel('label-plant2', -25, 15, 42);
+
+// 7. GRID LINES (Supply network)
+function drawGridLine(startV, endV, colorHex) {
+    const mat = new THREE.LineBasicMaterial({ color: colorHex, linewidth: 2, transparent: true, opacity: 0.5 });
+    const points = [
+        new THREE.Vector3(startV.x, 0.5, startV.z),
+        new THREE.Vector3(endV.x, 0.5, endV.z)
+    ];
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), mat);
+    scene.add(line);
+}
+// Connect plants to battery
+drawGridLine(pp1.position, battMesh.position, 0x3b82f6);
+drawGridLine(pp2.position, battMesh.position, 0x3b82f6);
+// Connect battery to zones
+drawGridLine(battMesh.position, new THREE.Vector3(-20, 0, -20), 0x22c55e); // Hospital
+drawGridLine(battMesh.position, new THREE.Vector3(25, 0, 20), 0x22c55e);   // School
+drawGridLine(battMesh.position, new THREE.Vector3(-20, 0, 20), 0x22c55e);  // Industry
+drawGridLine(battMesh.position, new THREE.Vector3(30, 0, -20), 0x22c55e);  // Residential
 
 // ── Logic: Day/Night & Lighting ─────────────────────────────────────────────
 
@@ -333,7 +365,7 @@ async function fetchState() {
 
         // Battery
         elBatt.textContent = state.battery_energy.toFixed(1);
-        elBattMeter.style.width = `${(state.battery_energy / 200) * 100}%`;
+        elBattMeter.style.width = `${(state.battery_energy / 400) * 100}%`;
         
         // Battery block lighting
         if (state.battery_delta > 0) {
@@ -347,7 +379,7 @@ async function fetchState() {
         }
         
         elDemand.textContent = state.total_demand.toFixed(1);
-        elDemandMeter.style.width = `${Math.min(100, (state.total_demand / 350) * 100)}%`;
+        elDemandMeter.style.width = `${Math.min(100, (state.total_demand / 900) * 100)}%`;
 
         // Update Window Emit Logic per zone
         ["hospital", "school", "industry", "residential"].forEach(z => updateWindowLighting(z, state));
