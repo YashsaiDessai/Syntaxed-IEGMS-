@@ -4,10 +4,13 @@
 
 const API = "http://localhost:8000";
 
+// Global object references for animation
+let windmillRotor = null;
+
 // ── 3D Scene Setup ──────────────────────────────────────────────────────────
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
-scene.fog = new THREE.Fog(0x87CEEB, 80, 350);
+scene.fog = new THREE.Fog(0x87CEEB, 300, 2000); // Minimal fog - pushed far out for clear view
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
 // Positioned to look over the city like an isometric god game
@@ -20,7 +23,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 0.8; // Reduced exposure for more realistic brightness
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
 window.addEventListener('resize', () => {
@@ -30,10 +33,10 @@ window.addEventListener('resize', () => {
 });
 
 // ── Lighting (Sun cycle) ────────────────────────────────────────────────────
-const ambientLight = new THREE.AmbientLight(0x404050, 0.3);
+const ambientLight = new THREE.AmbientLight(0x606070, 0.4); // Balanced ambient light
 scene.add(ambientLight);
 
-const sunLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+const sunLight = new THREE.DirectionalLight(0xffeedd, 1.0); // Realistic sun intensity
 sunLight.castShadow = true;
 sunLight.shadow.mapSize.width = 2048;
 sunLight.shadow.mapSize.height = 2048;
@@ -46,14 +49,18 @@ scene.add(sunLight);
 
 // ── Enhanced Lighting for Reflections ──────────────────────────────────────
 // Add additional lights to enhance reflections and realism
-const topLight = new THREE.DirectionalLight(0xffffff, 0.5);
+const topLight = new THREE.DirectionalLight(0xffffff, 0.4); // Subtle top light
 topLight.position.set(50, 100, 30);
 topLight.castShadow = true;
 scene.add(topLight);
 
-const rimLight = new THREE.DirectionalLight(0x3b82f6, 0.3);
+const rimLight = new THREE.DirectionalLight(0x3b82f6, 0.25); // Subtle rim light
 rimLight.position.set(-50, 30, -50);
 scene.add(rimLight);
+
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.15); // Subtle fill light
+fillLight.position.set(50, 30, -50);
+scene.add(fillLight);
 
 // ── Materials ───────────────────────────────────────────────────────────────
 const matGround = new THREE.MeshStandardMaterial({ 
@@ -179,6 +186,31 @@ function createRoad(x, z, w, d) {
     line.rotation.x = -Math.PI / 2;
     line.position.set(x, 0.08, z);
     scene.add(line);
+    
+    // Road boundary markers (white dashes on sides)
+    const boundaryMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.0, roughness: 0.9 });
+    const sideOffset = d / 2 - 0.3;
+    if (isHorizontal) {
+        // Top and bottom boundaries
+        for (let i = -w/2; i <= w/2; i += 4) {
+            const marker = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.2), boundaryMat);
+            marker.position.set(x + i, 0.09, z + sideOffset);
+            scene.add(marker);
+            const marker2 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.2), boundaryMat);
+            marker2.position.set(x + i, 0.09, z - sideOffset);
+            scene.add(marker2);
+        }
+    } else {
+        // Left and right boundaries
+        for (let i = -d/2; i <= d/2; i += 4) {
+            const marker = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 1.2), boundaryMat);
+            marker.position.set(x + w/2 - 0.3, 0.09, z + i);
+            scene.add(marker);
+            const marker2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 1.2), boundaryMat);
+            marker2.position.set(x - w/2 + 0.3, 0.09, z + i);
+            scene.add(marker2);
+        }
+    }
 }
 
 // Build Main Grid Roads
@@ -267,6 +299,8 @@ addLabel('label-hospital', -20, 28, -20);
 
 // 2. RESIDENTIAL (Top Right Grid) - Enhanced with variety
 const roofMatRes = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.85 });
+const solarPanelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, metalness: 0.6, roughness: 0.3 });
+
 for(let rx = 15; rx <= 45; rx += 10) {
     for(let rz = -35; rz <= -10; rz += 10) {
         // Vary the house colors slightly
@@ -289,6 +323,13 @@ for(let rx = 15; rx <= 45; rx += 10) {
         roof.castShadow = true;
         roofGroup.add(roof);
         
+        // Solar panels on roof (slightly smaller than roof)
+        const solarW = w - 0.5, solarH = 0.15, solarD = d - 0.5;
+        const solarPanel = new THREE.Mesh(new THREE.BoxGeometry(solarW, solarH, solarD), solarPanelMat);
+        solarPanel.position.set(0, h/2 + 0.9, 0);
+        solarPanel.castShadow = true;
+        roofGroup.add(solarPanel);
+        
         house.add(roofGroup);
         
         scene.add(house);
@@ -297,10 +338,10 @@ for(let rx = 15; rx <= 45; rx += 10) {
 addLabel('label-residential', 30, 10, -20);
 
 
-// 3. INDUSTRIAL ZONE (Bottom Left) - Enhanced
+// 3. INDUSTRIAL ZONE (Pulled back - Bottom zone) - Enhanced
 const indW = 12, indH = 8, indD = 20;
 const factory = new THREE.Mesh(new THREE.BoxGeometry(indW, indH, indD), matInd);
-factory.position.set(-20, indH/2, 20);
+factory.position.set(-20, indH/2, 50);
 factory.castShadow = true; factory.receiveShadow = true;
 attachWindows(factory, indW, indH, indD, matWinInd, "industry");
 
@@ -316,12 +357,12 @@ scene.add(factory);
 // Smokestacks - enhanced with more detail
 for (let i = 0; i < 3; i++) {
     const stack = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 2, 15, 16), matFactoryRoof);
-    stack.position.set(-24 + i * 4, 12, 15);
+    stack.position.set(-24 + i * 4, 12, 45);
     stack.castShadow = true;
     scene.add(stack);
 }
 
-addLabel('label-industry', -20, 18, 20);
+addLabel('label-industry', -20, 18, 50);
 
 
 // 4. SCHOOL / EDU (Bottom Right) - Enhanced
@@ -337,6 +378,13 @@ const schoolRoof = new THREE.Mesh(new THREE.BoxGeometry(sW + 2, 1, sD + 2), scho
 schoolRoof.position.set(0, sH/2 + 0.5, 0);
 schoolRoof.castShadow = true;
 school.add(schoolRoof);
+
+// Solar panels on school roof
+const schoolSolarW = sW - 1, schoolSolarH = 0.2, schoolSolarD = sD - 1;
+const schoolSolarPanel = new THREE.Mesh(new THREE.BoxGeometry(schoolSolarW, schoolSolarH, schoolSolarD), solarPanelMat);
+schoolSolarPanel.position.set(0, sH/2 + 1.2, 0);
+schoolSolarPanel.castShadow = true;
+school.add(schoolSolarPanel);
 
 // Flag pole on school
 const flagPole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 3, 8), new THREE.MeshStandardMaterial({ color: 0x1e3a8a }));
@@ -357,6 +405,12 @@ wing1Roof.position.set(0, 3.5, 0);
 wing1Roof.castShadow = true;
 wing1.add(wing1Roof);
 
+// Solar panels on wing1 roof
+const wingSolarPanel1 = new THREE.Mesh(new THREE.BoxGeometry(6, 0.15, 11.5), solarPanelMat);
+wingSolarPanel1.position.set(0, 4.2, 0);
+wingSolarPanel1.castShadow = true;
+wing1.add(wingSolarPanel1);
+
 scene.add(wing1);
 
 const wing2 = new THREE.Mesh(wingGeo, matSchool);
@@ -368,59 +422,210 @@ wing2Roof.position.set(0, 3.5, 0);
 wing2Roof.castShadow = true;
 wing2.add(wing2Roof);
 
+// Solar panels on wing2 roof
+const wingSolarPanel2 = new THREE.Mesh(new THREE.BoxGeometry(6, 0.15, 11.5), solarPanelMat);
+wingSolarPanel2.position.set(0, 4.2, 0);
+wingSolarPanel2.castShadow = true;
+wing2.add(wingSolarPanel2);
+
 scene.add(wing2);
 
 addLabel('label-school', 25, 12, 20);
 
-// 5. BATTERY SUBSTATION (Near Power Plants & Industrial Zone)
+// MOUNTAIN with WINDMILL behind school
+const mountainGeo = new THREE.ConeGeometry(20, 25, 32);
+const mountainMat = new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.9 });
+const mountain = new THREE.Mesh(mountainGeo, mountainMat);
+mountain.position.set(25, 12.5, 60);
+mountain.castShadow = true;
+mountain.receiveShadow = true;
+scene.add(mountain);
+
+// Windmill on top of mountain
+const windmillBase = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.5, 4, 8), new THREE.MeshStandardMaterial({ color: 0x8b7355 }));
+windmillBase.position.set(25, 38, 60);
+windmillBase.castShadow = true;
+scene.add(windmillBase);
+
+// Windmill rotor (spinning blades)
+const rotorGroup = new THREE.Group();
+rotorGroup.position.set(25, 40.5, 60);
+scene.add(rotorGroup);
+
+// Create 3 windmill blades
+for (let i = 0; i < 3; i++) {
+    const bladeGeo = new THREE.BoxGeometry(1.5, 0.15, 8);
+    const bladeMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, metalness: 0.3, roughness: 0.4 });
+    const blade = new THREE.Mesh(bladeGeo, bladeMat);
+    blade.castShadow = true;
+    blade.rotation.z = (Math.PI * 2 / 3) * i;
+    rotorGroup.add(blade);
+}
+
+// Store rotor for animation
+windmillRotor = rotorGroup;
+
+// 5. BATTERY SUBSTATION (Energy Reserve - Previously Industrial Zone)
 const battMesh = new THREE.Mesh(new THREE.BoxGeometry(8, 8, 8), matBatt);
-battMesh.position.set(-30, 4, 30);
+battMesh.position.set(-20, 4, 20);
 battMesh.castShadow = true; battMesh.receiveShadow = true;
 attachWindows(battMesh, 8, 8, 8, matWinBatt, "battery");
 scene.add(battMesh);
-addLabel('label-battery', -30, 14, 30);
+addLabel('label-battery', -20, 14, 20);
 
-// 6. POWER PLANTS (Generation)
+// 6. POWER PLANTS (Generation) - Arranged neatly to avoid overlaps (closer together)
 const plantMat = new THREE.MeshStandardMaterial({ color: 0x64748b });
 const pp1 = new THREE.Mesh(new THREE.CylinderGeometry(3, 5, 12), plantMat);
-pp1.position.set(-35, 6, 35);
+pp1.position.set(-48, 6, 35);
 pp1.castShadow = true; pp1.receiveShadow = true;
 scene.add(pp1);
-addLabel('label-plant1', -35, 15, 35);
+addLabel('label-plant1', -48, 15, 35);
 
 const pp2 = new THREE.Mesh(new THREE.CylinderGeometry(3, 5, 12), plantMat);
-pp2.position.set(-25, 6, 42);
+pp2.position.set(-48, 6, 55);
 pp2.castShadow = true; pp2.receiveShadow = true;
 scene.add(pp2);
-addLabel('label-plant2', -25, 15, 42);
+addLabel('label-plant2', -48, 15, 55);
 
-// 7. GRID LINES & TRANSMISSION NETWORK (Neat paths)
-function drawTransmissionLine(startV, endV, colorHex) {
-    // Create a more visual transmission line with multiple points for smooth curves
-    const points = [];
-    const steps = 20;
+// 7. ELECTRIC POLES (4 major distribution poles at zone corners - away from roads)
+const matPole = new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.9 });
+
+function createPole(x, z) {
+    const poleGroup = new THREE.Group();
     
+    // Main pole (shorter - proportion to buildings)
+    const poleGeom = new THREE.CylinderGeometry(0.35, 0.45, 9, 8);
+    const pole = new THREE.Mesh(poleGeom, matPole);
+    pole.position.y = 4.5;
+    pole.castShadow = true;
+    poleGroup.add(pole);
+    
+    // Crossarm
+    const armGeom = new THREE.BoxGeometry(5, 0.25, 0.25);
+    const arm = new THREE.Mesh(armGeom, matPole);
+    arm.position.y = 8;
+    arm.castShadow = true;
+    poleGroup.add(arm);
+    
+    poleGroup.position.set(x, 0, z);
+    scene.add(poleGroup);
+    return poleGroup;
+}
+
+// Create 4 major poles near the road junction (at center coordinates but off the roads)
+const poleNW = createPole(-7, -7);      // North-West of junction
+const poleSW = createPole(-7, 7);       // South-West of junction
+const poleNE = createPole(7, -7);       // North-East of junction
+const poleSE = createPole(7, 7);        // South-East of junction
+
+// 8. GRID LINES & TRANSMISSION NETWORK (Curved paths around buildings)
+function drawCurvedTransmissionLine(startV, endV, colorHex, curveAmount = 0.3) {
+    // Create curved path using quadratic bezier
+    const points = [];
+    const steps = 40;
+    
+    // Calculate control point for curve
+    const midX = (startV.x + endV.x) / 2;
+    const midZ = (startV.z + endV.z) / 2;
+    
+    // Offset the control point perpendicular to the line
+    const dx = endV.x - startV.x;
+    const dz = endV.z - startV.z;
+    const len = Math.sqrt(dx*dx + dz*dz);
+    const perpX = -dz / len * len * curveAmount;
+    const perpZ = dx / len * len * curveAmount;
+    
+    const controlPoint = new THREE.Vector3(midX + perpX, 3, midZ + perpZ);
+    
+    // Generate curve points using quadratic bezier
     for (let i = 0; i <= steps; i++) {
         const t = i / steps;
-        const x = startV.x + (endV.x - startV.x) * t;
-        const z = startV.z + (endV.z - startV.z) * t;
-        points.push(new THREE.Vector3(x, 0.5, z));
+        const t1 = 1 - t;
+        
+        // Quadratic Bezier: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+        const x = t1*t1*startV.x + 2*t1*t*controlPoint.x + t*t*endV.x;
+        const z = t1*t1*startV.z + 2*t1*t*controlPoint.z + t*t*endV.z;
+        const y = 2.5 + Math.sin(t * Math.PI) * 1.5; // Add slight height variation for realism
+        
+        points.push(new THREE.Vector3(x, y, z));
     }
     
-    const mat = new THREE.LineBasicMaterial({ color: colorHex, linewidth: 3, transparent: true, opacity: 0.8 });
+    const mat = new THREE.LineBasicMaterial({ color: colorHex, linewidth: 3, transparent: true, opacity: 0.85 });
     const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), mat);
     scene.add(line);
 }
 
-// Plants to Battery (Blue high-voltage transmission lines)
-drawTransmissionLine(pp1.position, battMesh.position, 0x3b82f6);
-drawTransmissionLine(pp2.position, battMesh.position, 0x3b82f6);
+function drawTransmissionWithWaypoints(startV, waypoints, endV, colorHex) {
+    // Draw transmission line through waypoints to route around buildings
+    const allPoints = [startV, ...waypoints, endV];
+    const points = [];
+    const steps = 15; // Segments between each waypoint pair
+    
+    for (let i = 0; i < allPoints.length - 1; i++) {
+        const p1 = allPoints[i];
+        const p2 = allPoints[i + 1];
+        
+        for (let j = 0; j <= steps; j++) {
+            const t = j / steps;
+            const x = p1.x + (p2.x - p1.x) * t;
+            const z = p1.z + (p2.z - p1.z) * t;
+            const y = 2.5;
+            
+            points.push(new THREE.Vector3(x, y, z));
+        }
+    }
+    
+    const mat = new THREE.LineBasicMaterial({ color: colorHex, linewidth: 3, transparent: true, opacity: 0.85 });
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), mat);
+    scene.add(line);
+}
 
-// Battery to zones (Green distribution lines via grid paths)
-drawTransmissionLine(battMesh.position, new THREE.Vector3(-20, 0.5, -20), 0x06b6d4); // Hospital path
-drawTransmissionLine(battMesh.position, new THREE.Vector3(25, 0.5, 20), 0x22c55e);   // School path
-drawTransmissionLine(battMesh.position, new THREE.Vector3(-20, 0.5, 20), 0x10b981);  // Industry branch
-drawTransmissionLine(battMesh.position, new THREE.Vector3(30, 0.5, -25), 0x84cc16);  // Residential path
+// HIGH-VOLTAGE TRANSMISSION: Power Plants -> Battery (Direct routes)
+drawCurvedTransmissionLine(pp1.position, battMesh.position, 0x1e40af, 0.08);
+drawCurvedTransmissionLine(pp2.position, battMesh.position, 0x1e40af, 0.08);
+
+// DISTRIBUTION: Battery at (-20, 20) -> Central poles (Smart routing using roads)
+// Battery now positioned where industrial was - clean radial distribution from center
+
+// North-West pole (Hospital) - route: battery → north on vertical road → junction → to pole
+drawTransmissionWithWaypoints(
+    battMesh.position,
+    [new THREE.Vector3(-20, 0.5, 0), new THREE.Vector3(-7, 0.5, 0)],
+    poleNW.position,
+    0x059669
+);
+
+// South-West pole (Industrial) - route: battery → south on vertical road → junction → to pole
+drawTransmissionWithWaypoints(
+    battMesh.position,
+    [new THREE.Vector3(-20, 0.5, 0), new THREE.Vector3(-7, 0.5, 0)],
+    poleSW.position,
+    0x65a30d
+);
+
+// North-East pole (Residential) - route: battery → east on horizontal road → junction → to pole
+drawTransmissionWithWaypoints(
+    battMesh.position,
+    [new THREE.Vector3(0, 0.5, 0), new THREE.Vector3(7, 0.5, 0)],
+    poleNE.position,
+    0x16a34a
+);
+
+// South-East pole (School) - route: battery → east on horizontal road → junction → to pole
+drawTransmissionWithWaypoints(
+    battMesh.position,
+    [new THREE.Vector3(0, 0.5, 0), new THREE.Vector3(7, 0.5, 0)],
+    poleSE.position,
+    0x7fb81d
+);
+
+// DIRECT LINE: Battery -> Industrial Zone via SW Pole (High-priority industrial power)
+drawTransmissionWithWaypoints(
+    battMesh.position,
+    [new THREE.Vector3(-7, 0.5, 7)],
+    new THREE.Vector3(-20, 0.5, 50),
+    0xff6b00
+);
 
 // ── ENVIRONMENT DETAILS (Trees, Footpaths, Vehicles) ──────────────────────
 
@@ -454,19 +659,19 @@ function createTree(x, z) {
 function createCar(x, z, rotY = 0) {
     const group = new THREE.Group();
     
-    // Main body
+    // Main body (positioned higher to sit on wheels)
     const body = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 1.5), matCar);
-    body.position.y = 0.75;
+    body.position.y = 1.2;
     body.castShadow = true;
     group.add(body);
     
     // Cabin
     const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1, 1.3), matCar);
-    cabin.position.set(0.3, 1.5, 0);
+    cabin.position.set(0.3, 2.2, 0);
     cabin.castShadow = true;
     group.add(cabin);
     
-    // Wheels
+    // Wheels (sitting on road surface)
     const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.4, 16);
     const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.7 });
     
@@ -496,6 +701,8 @@ function createCar(x, z, rotY = 0) {
     
     group.position.set(x, 0, z);
     group.rotation.y = rotY;
+    // Store wheel references for animation
+    group.wheels = [wheel1, wheel2, wheel3, wheel4];
     scene.add(group);
     return group;
 }
@@ -527,11 +734,11 @@ createFootpath(25, 15, 6, 6);     // School area
 createFootpath(-20, 25, 6, 10);   // Industrial area
 createFootpath(-30, 30, 5, 5);    // Battery area
 
-// Add vehicles on roads
+// Add vehicles on roads (keeping them within road boundaries)
 const cars = [];
 const carData = [
-    { start: new THREE.Vector3(0, 0.75, -5), end: new THREE.Vector3(40, 0.75, -5), speed: 12 },
-    { start: new THREE.Vector3(30, 0.75, 10), end: new THREE.Vector3(-10, 0.75, 10), speed: 12 }
+    { start: new THREE.Vector3(-45, 0, 0), end: new THREE.Vector3(45, 0, 0), speed: 12 },
+    { start: new THREE.Vector3(0, 0, -35), end: new THREE.Vector3(0, 0, 35), speed: 12 }
 ];
 
 carData.forEach((data, idx) => {
@@ -572,6 +779,7 @@ function createEnergyPath(startPos, endPos, color, label) {
     energyPaths.push({
         line: pathLine,
         curve: curve,
+        baseColor: color,
         color: color,
         label: label,
         particles: [],
@@ -762,7 +970,7 @@ async function fetchState() {
         }
         
         elDemand.textContent = state.total_demand.toFixed(1);
-        elDemandMeter.style.width = `${Math.min(100, (state.total_demand / 900) * 100)}%`;
+        elDemandMeter.style.width = `${Math.min(100, (state.total_demand / 500) * 100)}%`;
 
         // Update Window Emit Logic per zone
         ["hospital", "school", "industry", "residential"].forEach(z => updateWindowLighting(z, state));
@@ -781,6 +989,23 @@ async function fetchState() {
                     const supplied = state.supplied ? state.supplied[zoneId] : 0;
                     path.isActive = supplied > 0;
                 }
+            }
+        });
+        
+        // Update grid line colors based on supply status
+        const supplyStatusColors = {
+            "green": 0x22c55e,    // Green for normal supply
+            "yellow": 0xeab308,   // Yellow for low supply
+            "red": 0xef4444       // Red for no supply
+        };
+        
+        const gridColor = supplyStatusColors[state.supply_status || "green"];
+        energyPaths.forEach((path, idx) => {
+            // For battery-to-zone paths (idx >= 2), use the dynamic color based on supply status
+            // For plant-to-battery paths (idx < 2), keep the original blue
+            if (idx >= 2) {
+                path.color = gridColor;
+                path.line.material.color.setHex(gridColor);
             }
         });
 
@@ -926,6 +1151,11 @@ function animate() {
     // Update camera position based on mouse/keyboard input
     updateCameraPosition();
     
+    // Rotate windmill rotor
+    if (typeof windmillRotor !== 'undefined' && windmillRotor) {
+        windmillRotor.rotation.x += 0.02; // Smooth continuous rotation
+    }
+    
     // Update energy path visualization
     energyPaths.forEach((path, idx) => {
         if (path.isActive) {
@@ -952,10 +1182,13 @@ function animate() {
             
             path.particles.mesh.geometry.attributes.position.needsUpdate = true;
             path.particles.mesh.material.opacity = path.isActive ? 0.9 : 0.1;
+            
+            // Update particle color to match current grid status
+            path.particles.mesh.material.color.setHex(path.color);
         }
     });
 
-    // Update car positions (animate along paths)
+    // Update car positions with improved physics (steering, acceleration & wheel rotation)
     const dt = 1 / 60; // Assuming 60 FPS
     cars.forEach(carData => {
         carData.progress += (carData.speed * dt) / carData.start.distanceTo(carData.end);
@@ -963,6 +1196,21 @@ function animate() {
         
         const path = new THREE.Vector3().lerpVectors(carData.start, carData.end, carData.progress);
         carData.mesh.position.copy(path);
+        
+        // Make car face the direction of travel - only rotate on Y axis to prevent tilting
+        const direction = new THREE.Vector3().subVectors(carData.end, carData.start).normalize();
+        carData.mesh.rotation.x = 0; // Keep car upright (no forward/backward tilt)
+        carData.mesh.rotation.y = Math.atan2(direction.x, direction.z);
+        carData.mesh.rotation.z = 0; // No side-to-side tilt
+        
+        // Rotate wheels based on movement - speed-dependent rotation
+        // Wheel rotation speed: 0.3 radians per frame at 1.0 speed, scales linearly
+        const wheelRotationSpeed = carData.speed * 0.3;
+        if (carData.mesh.wheels) {
+            carData.mesh.wheels.forEach(wheel => {
+                wheel.rotation.x += wheelRotationSpeed;
+            });
+        }
     });
 
     // Update floating labels UI

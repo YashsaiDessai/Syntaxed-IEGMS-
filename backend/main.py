@@ -50,7 +50,7 @@ async def simulation_loop():
         
         # Only run optimizer if we have actual data from the simulator
         if actuals:
-            result = optimize_grid(actuals, predicted, AppState.battery_energy)
+            result = optimize_grid(actuals, predicted, AppState.battery_energy, AppState.simulated_hour)
             AppState.battery_energy = result["battery_energy"]
             
             # Enrich result for the frontend

@@ -6,17 +6,18 @@ Entities priority: Hospital > School > Industry > Residential.
 """
 
 # Grid constraints (MW)
-MAX_GRID_CAPACITY = 900.0  
+MAX_GRID_CAPACITY = 500.0  
 BATTERY_MAX_CHARGE = 400.0
 BATTERY_MAX_RATE = 100.0  # Max charge/discharge per iteration
 
 PRIORITY = ["hospital", "school", "industry", "residential"]
 
 
-def optimize_grid(actual_loads: dict, predicted_loads: dict, battery_energy: float) -> dict:
+def optimize_grid(actual_loads: dict, predicted_loads: dict, battery_energy: float, current_hour: float = 12.0) -> dict:
     """
     Given the current and predicted loads of the 4 entities, balance the grid
     by charging/discharging the battery and shedding load by priority.
+    After 17:00, reduce power to schools (not used at night).
     """
     # Use the max of actual vs predicted to be safe
     demand = {}
@@ -25,6 +26,11 @@ def optimize_grid(actual_loads: dict, predicted_loads: dict, battery_energy: flo
         act = actual_loads.get(entity, 0.0)
         pred = predicted_loads.get(entity, 0.0)
         safe_val = max(act, pred)
+        
+        # After 17:00 (5 PM), reduce school demand by 70% (schools close)
+        if entity == "school" and current_hour >= 17.0:
+            safe_val = safe_val * 0.3  # Keep only 30% for maintenance/security
+        
         demand[entity] = safe_val
         total_demand += safe_val
 
@@ -70,23 +76,33 @@ def optimize_grid(actual_loads: dict, predicted_loads: dict, battery_energy: flo
             can_shed = supplied[entity]
             if can_shed > 0:
                 shed_amount = min(can_shed, deficit)
-                supplied[entity] -= shed_amount
-                deficit -= shed_amount
-                pct = int((shed_amount / demand[entity]) * 100) if demand[entity] > 0 else 0
-                actions.append(f"⚠️ Shedding {pct}% ({round(shed_amount, 1)} MW) from {entity.capitalize()}.")
-
-    # Determine status color for frontend
+                supplied[entity] -= shed_ based on supply availability
+    total_supplied = sum(supplied.values())
+    supply_ratio = total_supplied / total_demand if total_demand > 0 else 1.0
+    
     if deficit > 0.1:
         status_code = "CRITICAL"
-    elif battery_delta < 0 or any("Shedding" in a for a in actions):
+        supply_status = "red"  # No supply - critical
+    elif supply_ratio < 0.6:
         status_code = "WARNING"
+        supply_status = "red"  # No supply - very low
+    elif supply_ratio < 0.9:
+        status_code = "WARNING"
+        supply_status = "yellow"  # Low supply
     else:
         status_code = "NORMAL"
+        supply_status = "green"  # Normal supply
 
     new_battery = min(BATTERY_MAX_CHARGE, max(0.0, battery_energy + battery_delta))
 
     return {
         "status_code": status_code,
+        "supply_status": supply_status,
+        "actions": actions,
+        "demand": {k: round(v, 2) for k, v in demand.items()},
+        "supplied": {k: round(v, 2) for k, v in supplied.items()},
+        "total_demand": round(total_demand, 2),
+        "total_supplied": round(total_supplied
         "actions": actions,
         "demand": {k: round(v, 2) for k, v in demand.items()},
         "supplied": {k: round(v, 2) for k, v in supplied.items()},
