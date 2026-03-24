@@ -327,6 +327,7 @@ for(let rx = 15; rx <= 45; rx += 10) {
         const solarW = w - 0.5, solarH = 0.15, solarD = d - 0.5;
         const solarPanel = new THREE.Mesh(new THREE.BoxGeometry(solarW, solarH, solarD), solarPanelMat);
         solarPanel.position.set(0, h/2 + 0.9, 0);
+        solarPanel.rotation.x = Math.PI / 8; // Tilt ~22.5 degrees to face the sun
         solarPanel.castShadow = true;
         roofGroup.add(solarPanel);
         
@@ -383,6 +384,7 @@ school.add(schoolRoof);
 const schoolSolarW = sW - 1, schoolSolarH = 0.2, schoolSolarD = sD - 1;
 const schoolSolarPanel = new THREE.Mesh(new THREE.BoxGeometry(schoolSolarW, schoolSolarH, schoolSolarD), solarPanelMat);
 schoolSolarPanel.position.set(0, sH/2 + 1.2, 0);
+schoolSolarPanel.rotation.x = Math.PI / 8; // Tilt ~22.5 degrees to face the sun
 schoolSolarPanel.castShadow = true;
 school.add(schoolSolarPanel);
 
@@ -408,6 +410,7 @@ wing1.add(wing1Roof);
 // Solar panels on wing1 roof
 const wingSolarPanel1 = new THREE.Mesh(new THREE.BoxGeometry(6, 0.15, 11.5), solarPanelMat);
 wingSolarPanel1.position.set(0, 4.2, 0);
+wingSolarPanel1.rotation.x = Math.PI / 8; // Tilt ~22.5 degrees to face the sun
 wingSolarPanel1.castShadow = true;
 wing1.add(wingSolarPanel1);
 
@@ -425,6 +428,7 @@ wing2.add(wing2Roof);
 // Solar panels on wing2 roof
 const wingSolarPanel2 = new THREE.Mesh(new THREE.BoxGeometry(6, 0.15, 11.5), solarPanelMat);
 wingSolarPanel2.position.set(0, 4.2, 0);
+wingSolarPanel2.rotation.x = Math.PI / 8; // Tilt ~22.5 degrees to face the sun
 wingSolarPanel2.castShadow = true;
 wing2.add(wingSolarPanel2);
 
@@ -432,38 +436,7 @@ scene.add(wing2);
 
 addLabel('label-school', 25, 12, 20);
 
-// MOUNTAIN with WINDMILL behind school
-const mountainGeo = new THREE.ConeGeometry(20, 25, 32);
-const mountainMat = new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.9 });
-const mountain = new THREE.Mesh(mountainGeo, mountainMat);
-mountain.position.set(25, 12.5, 60);
-mountain.castShadow = true;
-mountain.receiveShadow = true;
-scene.add(mountain);
-
-// Windmill on top of mountain
-const windmillBase = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.5, 4, 8), new THREE.MeshStandardMaterial({ color: 0x8b7355 }));
-windmillBase.position.set(25, 38, 60);
-windmillBase.castShadow = true;
-scene.add(windmillBase);
-
-// Windmill rotor (spinning blades)
-const rotorGroup = new THREE.Group();
-rotorGroup.position.set(25, 40.5, 60);
-scene.add(rotorGroup);
-
-// Create 3 windmill blades
-for (let i = 0; i < 3; i++) {
-    const bladeGeo = new THREE.BoxGeometry(1.5, 0.15, 8);
-    const bladeMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, metalness: 0.3, roughness: 0.4 });
-    const blade = new THREE.Mesh(bladeGeo, bladeMat);
-    blade.castShadow = true;
-    blade.rotation.z = (Math.PI * 2 / 3) * i;
-    rotorGroup.add(blade);
-}
-
-// Store rotor for animation
-windmillRotor = rotorGroup;
+// Natural landscape placeholder removed mountains and windmill for cleaner view
 
 // 5. BATTERY SUBSTATION (Energy Reserve - Previously Industrial Zone)
 const battMesh = new THREE.Mesh(new THREE.BoxGeometry(8, 8, 8), matBatt);
@@ -707,10 +680,10 @@ function createCar(x, z, rotY = 0) {
     return group;
 }
 
-// Add trees around the city (natural landscape)
-createTree(-50, 50);
+// Add trees around the city (natural landscape) - repositioned to avoid overlaps with power plants
+createTree(-35, 50);
 createTree(-55, 45);
-createTree(-45, 55);
+createTree(-65, 55);
 createTree(50, -45);
 createTree(55, -40);
 createTree(-60, -50);
@@ -718,6 +691,14 @@ createTree(60, 50);
 createTree(0, 70);
 createTree(-70, 0);
 createTree(70, 20);
+createTree(30, 50);
+createTree(20, -30);
+createTree(-40, -20);
+createTree(65, -20);
+createTree(-75, 30);
+createTree(45, 60);
+createTree(-20, 70);
+createTree(35, -60);
 
 // Add footpaths connecting buildings
 function createFootpath(x, z, w, d) {
