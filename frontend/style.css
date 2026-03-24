@@ -17,6 +17,11 @@ body {
   top: 0; left: 0;
   width: 100vw; height: 100vh;
   z-index: 1;
+  cursor: grab;
+}
+
+#canvas-container:active {
+  cursor: grabbing;
 }
 
 /* Floating 3D Labels */

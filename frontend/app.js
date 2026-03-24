@@ -18,6 +18,9 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
 window.addEventListener('resize', () => {
@@ -41,25 +44,109 @@ sunLight.shadow.camera.bottom = -60;
 sunLight.shadow.camera.far = 200;
 scene.add(sunLight);
 
+// ── Enhanced Lighting for Reflections ──────────────────────────────────────
+// Add additional lights to enhance reflections and realism
+const topLight = new THREE.DirectionalLight(0xffffff, 0.5);
+topLight.position.set(50, 100, 30);
+topLight.castShadow = true;
+scene.add(topLight);
+
+const rimLight = new THREE.DirectionalLight(0x3b82f6, 0.3);
+rimLight.position.set(-50, 30, -50);
+scene.add(rimLight);
+
 // ── Materials ───────────────────────────────────────────────────────────────
-const matGround = new THREE.MeshStandardMaterial({ color: 0x111827 });
-const matRoad = new THREE.MeshStandardMaterial({ color: 0x1f2937 });
+const matGround = new THREE.MeshStandardMaterial({ 
+    color: 0x111827,
+    metalness: 0.1,
+    roughness: 0.8
+});
+
+const matRoad = new THREE.MeshStandardMaterial({ 
+    color: 0x1f2937,
+    metalness: 0.0,
+    roughness: 0.9
+});
+
 const matLine = new THREE.MeshBasicMaterial({ color: 0xffffee });
 
-// Building Shells
-const matRes = new THREE.MeshStandardMaterial({ color: 0x475569 }); // grey houses
-const matHosp = new THREE.MeshStandardMaterial({ color: 0xf8fafc }); // white hospital
-const matInd = new THREE.MeshStandardMaterial({ color: 0x334155 }); // dark factories
-const matFactoryRoof = new THREE.MeshStandardMaterial({ color: 0x1e293b });
-const matSchool = new THREE.MeshStandardMaterial({ color: 0xb45309 }); // brick school
-const matBatt = new THREE.MeshStandardMaterial({ color: 0x1e3a8a }); // blue battery
+// Building Shells with enhanced refection
+const matRes = new THREE.MeshStandardMaterial({ 
+    color: 0x475569,
+    metalness: 0.1,
+    roughness: 0.7
+});
 
-// Window Materials (Emissive controlled by logic)
-const matWinHosp = new THREE.MeshStandardMaterial({ color: 0xffe600, emissive: 0xffe600, emissiveIntensity: 0 });
-const matWinSchool = new THREE.MeshStandardMaterial({ color: 0xffe600, emissive: 0xffe600, emissiveIntensity: 0 });
-const matWinInd = new THREE.MeshStandardMaterial({ color: 0xffe600, emissive: 0xffe600, emissiveIntensity: 0 });
-const matWinRes = new THREE.MeshStandardMaterial({ color: 0xffea80, emissive: 0xffea80, emissiveIntensity: 0 });
-const matWinBatt = new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x22c55e, emissiveIntensity: 0 });
+const matHosp = new THREE.MeshStandardMaterial({ 
+    color: 0xf8fafc,
+    metalness: 0.2,
+    roughness: 0.6
+});
+
+const matInd = new THREE.MeshStandardMaterial({ 
+    color: 0x334155,
+    metalness: 0.15,
+    roughness: 0.75
+});
+
+const matFactoryRoof = new THREE.MeshStandardMaterial({ 
+    color: 0x1e293b,
+    metalness: 0.4,
+    roughness: 0.5
+});
+
+const matSchool = new THREE.MeshStandardMaterial({ 
+    color: 0xb45309,
+    metalness: 0.05,
+    roughness: 0.8
+});
+
+const matBatt = new THREE.MeshStandardMaterial({ 
+    color: 0x1e3a8a,
+    metalness: 0.5,
+    roughness: 0.3
+});
+
+// Window Materials with realistic reflections
+const matWinHosp = new THREE.MeshStandardMaterial({ 
+    color: 0xffe600, 
+    emissive: 0xffe600, 
+    emissiveIntensity: 0,
+    metalness: 0.3,
+    roughness: 0.1
+});
+
+const matWinSchool = new THREE.MeshStandardMaterial({ 
+    color: 0xffe600, 
+    emissive: 0xffe600, 
+    emissiveIntensity: 0,
+    metalness: 0.3,
+    roughness: 0.1
+});
+
+const matWinInd = new THREE.MeshStandardMaterial({ 
+    color: 0xffe600, 
+    emissive: 0xffe600, 
+    emissiveIntensity: 0,
+    metalness: 0.3,
+    roughness: 0.1
+});
+
+const matWinRes = new THREE.MeshStandardMaterial({ 
+    color: 0xffea80, 
+    emissive: 0xffea80, 
+    emissiveIntensity: 0,
+    metalness: 0.3,
+    roughness: 0.1
+});
+
+const matWinBatt = new THREE.MeshStandardMaterial({ 
+    color: 0x22c55e, 
+    emissive: 0x22c55e, 
+    emissiveIntensity: 0,
+    metalness: 0.4,
+    roughness: 0.05
+});
 
 const windowMats = {
     hospital: matWinHosp,
@@ -266,6 +353,78 @@ drawGridLine(battMesh.position, new THREE.Vector3(25, 0, 20), 0x22c55e);   // Sc
 drawGridLine(battMesh.position, new THREE.Vector3(-20, 0, 20), 0x22c55e);  // Industry
 drawGridLine(battMesh.position, new THREE.Vector3(30, 0, -20), 0x22c55e);  // Residential
 
+// 8. ENERGY PATH VISUALIZATION (Animated Flow)
+const energyPaths = [];
+
+function createEnergyPath(startPos, endPos, color, label) {
+    // Create a glowing tube showing energy flow
+    const curve = new THREE.LineCurve3(
+        new THREE.Vector3(startPos.x, 0.5, startPos.z),
+        new THREE.Vector3(endPos.x, 0.5, endPos.z)
+    );
+    
+    // Path glow material
+    const glowMat = new THREE.LineBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0,
+        linewidth: 4
+    });
+    
+    const pathGeo = new THREE.BufferGeometry().setFromPoints(
+        curve.getPoints(20)
+    );
+    const pathLine = new THREE.Line(pathGeo, glowMat);
+    scene.add(pathLine);
+    
+    energyPaths.push({
+        line: pathLine,
+        curve: curve,
+        color: color,
+        label: label,
+        particles: [],
+        isActive: false
+    });
+    
+    // Create particle system for energy flow
+    const particleCount = 8;
+    const particleGeo = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    
+    for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] = 0;
+        positions[i * 3 + 1] = 0.5;
+        positions[i * 3 + 2] = 0;
+    }
+    
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    
+    const particleMat = new THREE.PointsMaterial({
+        color: color,
+        size: 0.5,
+        transparent: true,
+        opacity: 0.8,
+        sizeAttenuation: true
+    });
+    
+    const particles = new THREE.Points(particleGeo, particleMat);
+    scene.add(particles);
+    
+    energyPaths[energyPaths.length - 1].particles = {
+        mesh: particles,
+        positions: positions,
+        t: new Array(particleCount).fill(0)
+    };
+}
+
+// Create energy paths
+createEnergyPath(pp1.position, battMesh.position, 0x3b82f6, "Plant 1 → Battery");
+createEnergyPath(pp2.position, battMesh.position, 0x3b82f6, "Plant 2 → Battery");
+createEnergyPath(battMesh.position, new THREE.Vector3(-20, 0, -20), 0x22c55e, "Battery → Hospital");
+createEnergyPath(battMesh.position, new THREE.Vector3(25, 0, 20), 0x22c55e, "Battery → School");
+createEnergyPath(battMesh.position, new THREE.Vector3(-20, 0, 20), 0x22c55e, "Battery → Industry");
+createEnergyPath(battMesh.position, new THREE.Vector3(30, 0, -20), 0x22c55e, "Battery → Residential");
+
 // ── Logic: Day/Night & Lighting ─────────────────────────────────────────────
 
 let currentHour = 6.0;
@@ -383,6 +542,23 @@ async function fetchState() {
 
         // Update Window Emit Logic per zone
         ["hospital", "school", "industry", "residential"].forEach(z => updateWindowLighting(z, state));
+        
+        // Update Energy Paths based on supply/demand
+        energyPaths.forEach((path, idx) => {
+            // Plant to battery paths (indices 0-1) are active if battery has supply
+            if (idx < 2) {
+                path.isActive = state.battery_delta > 0;
+            } else {
+                // Battery to zone paths (indices 2+) are active if zone has supply
+                const zoneNames = ["hospital", "school", "industry", "residential"];
+                const zoneIdx = idx - 2;
+                if (zoneIdx < zoneNames.length) {
+                    const zoneId = zoneNames[zoneIdx];
+                    const supplied = state.supplied ? state.supplied[zoneId] : 0;
+                    path.isActive = supplied > 0;
+                }
+            }
+        });
 
         // Action Logs
         if (state.actions && state.actions.length > 0) {
@@ -411,6 +587,111 @@ elSlider.addEventListener("change", async (e) => {
     });
 });
 
+// ── Mouse Controls ──────────────────────────────────────────────────────────
+
+let cameraState = {
+    theta: Math.PI / 4,    // Angle around Y axis
+    phi: Math.PI / 3,      // Angle from Y axis
+    distance: 90,           // Distance from center
+    target: new THREE.Vector3(10, 5, -10)
+};
+
+const mouseState = {
+    isPressed: false,
+    lastX: 0,
+    lastY: 0,
+    deltaX: 0,
+    deltaY: 0
+};
+
+const canvas = renderer.domElement;
+
+// Mouse down
+canvas.addEventListener('mousedown', (e) => {
+    // Only start pan if clicking on canvas (not on UI panels)
+    if (e.target === canvas) {
+        mouseState.isPressed = true;
+        mouseState.lastX = e.clientX;
+        mouseState.lastY = e.clientY;
+    }
+});
+
+// Mouse move
+document.addEventListener('mousemove', (e) => {
+    if (mouseState.isPressed) {
+        mouseState.deltaX = e.clientX - mouseState.lastX;
+        mouseState.deltaY = e.clientY - mouseState.lastY;
+        mouseState.lastX = e.clientX;
+        mouseState.lastY = e.clientY;
+        
+        // Pan camera: rotate around target
+        cameraState.theta += mouseState.deltaX * 0.005;
+        cameraState.phi += mouseState.deltaY * 0.005;
+        
+        // Constrain phi to avoid flipping
+        cameraState.phi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraState.phi));
+    }
+});
+
+// Mouse up
+document.addEventListener('mouseup', () => {
+    mouseState.isPressed = false;
+});
+
+// Mouse wheel: zoom in/out (on canvas only)
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomSpeed = 2;
+    if (e.deltaY < 0) {
+        // Zoom in
+        cameraState.distance = Math.max(20, cameraState.distance - zoomSpeed);
+    } else {
+        // Zoom out
+        cameraState.distance = Math.min(200, cameraState.distance + zoomSpeed);
+    }
+}, { passive: false });
+
+// Keyboard controls: Arrow keys to pan, +/- to zoom
+document.addEventListener('keydown', (e) => {
+    const panSpeed = 0.05;
+    const zoomSpeed = 2;
+    
+    switch(e.key) {
+        case 'ArrowLeft':
+            cameraState.theta -= panSpeed;
+            break;
+        case 'ArrowRight':
+            cameraState.theta += panSpeed;
+            break;
+        case 'ArrowUp':
+            cameraState.phi -= panSpeed;
+            cameraState.phi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraState.phi));
+            break;
+        case 'ArrowDown':
+            cameraState.phi += panSpeed;
+            cameraState.phi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraState.phi));
+            break;
+        case '+':
+        case '=':
+            cameraState.distance = Math.max(20, cameraState.distance - zoomSpeed);
+            break;
+        case '-':
+            cameraState.distance = Math.min(200, cameraState.distance + zoomSpeed);
+            break;
+    }
+});
+
+function updateCameraPosition() {
+    const pos = new THREE.Vector3(
+        cameraState.distance * Math.sin(cameraState.phi) * Math.sin(cameraState.theta),
+        cameraState.distance * Math.cos(cameraState.phi),
+        cameraState.distance * Math.sin(cameraState.phi) * Math.cos(cameraState.theta)
+    );
+    
+    camera.position.copy(pos).add(cameraState.target);
+    camera.lookAt(cameraState.target);
+}
+
 // ── Animation Loop ──────────────────────────────────────────────────────────
 
 const tempV = new THREE.Vector3();
@@ -418,11 +699,37 @@ const tempV = new THREE.Vector3();
 function animate() {
     requestAnimationFrame(animate);
     
-    // Slow camera rotation / bob
-    const t = Date.now() * 0.0005;
-    camera.position.x = -60 + Math.sin(t) * 5;
-    camera.position.z = 60 + Math.cos(t) * 5;
-    camera.lookAt(10, 0, -10);
+    // Update camera position based on mouse/keyboard input
+    updateCameraPosition();
+    
+    // Update energy path visualization
+    energyPaths.forEach((path, idx) => {
+        if (path.isActive) {
+            // Glow effect on active paths
+            path.line.material.opacity = 0.8;
+        } else {
+            path.line.material.opacity = 0.1;
+        }
+        
+        // Animate particles along the path
+        if (path.particles && path.particles.mesh) {
+            const positions = path.particles.positions;
+            const t = path.particles.t;
+            const time = Date.now() * 0.001;
+            
+            for (let i = 0; i < t.length; i++) {
+                t[i] = (time * 0.5 + i / t.length) % 1.0;
+                const point = path.curve.getPoint(t[i]);
+                
+                positions[i * 3] = point.x;
+                positions[i * 3 + 1] = point.y;
+                positions[i * 3 + 2] = point.z;
+            }
+            
+            path.particles.mesh.geometry.attributes.position.needsUpdate = true;
+            path.particles.mesh.material.opacity = path.isActive ? 0.9 : 0.1;
+        }
+    });
 
     // Update floating labels UI
     floatingLabels.forEach(lbl => {
