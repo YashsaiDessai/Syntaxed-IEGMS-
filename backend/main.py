@@ -7,14 +7,21 @@ runs the optimizer, and serves the dashboard with AI Agent integration.
 
 import asyncio
 import os
+import sys
 from typing import Optional
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
+
+# Force UTF-8 output on Windows so Unicode chars don't crash the terminal
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 from mqtt_client import start_mqtt, get_recent, publish_time_sync
 from ml_model import predict_all
-from optimizer import optimize_grid, BATTERY_MAX_CHARGE
+from optimizer import optimize_grid, BATTERY_MAX_CHARGE, get_entity_schedule_status
 from agent_orchestrator import create_grid_agent, OllamaConfig
 
 app = FastAPI(title="Smart Grid Optimizer V2 Engine")
@@ -35,7 +42,7 @@ class AppState:
     grid_agent = None             # AI Agent instance
     ollama_config = {             # Ollama configuration
         "endpoint": os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434"),
-        "model": os.getenv("OLLAMA_MODEL", "mistral")
+        "model": os.getenv("OLLAMA_MODEL", "gemma3:1b")
     }
 
 
@@ -58,11 +65,12 @@ async def simulation_loop():
         
         # Only run optimizer if we have actual data from the simulator
         if actuals:
-            result = optimize_grid(actuals, predicted, AppState.battery_energy)
+            result = optimize_grid(
+                actuals, predicted,
+                AppState.battery_energy,
+                hour=AppState.simulated_hour   # <-- time-aware
+            )
             AppState.battery_energy = result["battery_energy"]
-            
-            # Enrich result for the frontend
-            result["simulated_hour"] = round(AppState.simulated_hour, 2)
             result["predicted_loads"] = predicted
             AppState.latest_opt = result
 
@@ -162,15 +170,37 @@ def agent_decide(req: AgentQueryRequest):
             "status": "error",
             "message": "Agent not initialized. Configure endpoint and model first."
         }
-    
+
+    opt = AppState.latest_opt or {}
     grid_state = {
-        "total_demand": sum(AppState.latest_opt.get("demand", {}).values()) if AppState.latest_opt else 0,
-        "total_supply": AppState.latest_opt.get("total_supplied", 0) if AppState.latest_opt else 0,
-        "predicted_demand": sum(AppState.latest_opt.get("predicted_loads", {}).values()) if AppState.latest_opt else 0
+        "simulated_hour": round(AppState.simulated_hour, 2),
+        "total_demand": sum(opt.get("demand", {}).values()),
+        "total_supply": opt.get("total_supplied", 0),
+        "predicted_demand": sum(opt.get("predicted_loads", {}).values()),
+        "battery_energy": opt.get("battery_energy", AppState.battery_energy),
+        "peak_boost_active": opt.get("peak_boost_active", False),
+        "freed_mw": opt.get("freed_mw", 0),
+        "schedule_status": opt.get("schedule_status",
+                               get_entity_schedule_status(AppState.simulated_hour)),
+        "demand_by_entity": opt.get("demand", {}),
+        "supplied_by_entity": opt.get("supplied", {}),
+        "recent_actions": opt.get("actions", [])
     }
-    
+
     decision = AppState.grid_agent.make_decision(grid_state, req.query)
     return decision
+
+
+@app.get("/agent/schedule")
+def agent_schedule():
+    """Return current time-policy status for all entities."""
+    status = get_entity_schedule_status(AppState.simulated_hour)
+    return {
+        "simulated_hour": round(AppState.simulated_hour, 2),
+        "schedule": status,
+        "peak_hour": AppState.latest_opt.get("peak_boost_active", False)
+            if AppState.latest_opt else False
+    }
 
 @app.get("/agent/status")
 def agent_status():
@@ -189,6 +219,14 @@ def agent_status():
     }
 
 
+# Serve frontend static files - do this LAST so API routes take priority
+FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
+FRONTEND_DIR = os.path.abspath(FRONTEND_DIR)
+
+if os.path.isdir(FRONTEND_DIR):
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)

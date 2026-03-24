@@ -30,10 +30,10 @@ def on_connect(client, userdata, flags, reason_code, properties):
     global _connected
     if reason_code == 0:
         _connected = True
-        print(f"[MQTT] Connected to {BROKER}. Subscribing to '{TOPIC_DATA}' …")
+        print(f"[MQTT] Connected to {BROKER}. Subscribing to '{TOPIC_DATA}' ?")
         client.subscribe(TOPIC_DATA)
     else:
-        print(f"[MQTT] Connection refused – reason_code={reason_code}")
+        print(f"[MQTT] Connection refused ? reason_code={reason_code}")
 
 def on_disconnect(client, userdata, flags, reason_code, properties):
     global _connected
@@ -71,11 +71,11 @@ def _run_mqtt():
 
     while True:
         try:
-            print(f"[MQTT] Connecting to {BROKER}:{PORT} …")
+            print(f"[MQTT] Connecting to {BROKER}:{PORT} ?")
             _global_client.connect(BROKER, PORT, keepalive=60)
             _global_client.loop_forever()
         except Exception as exc:
-            print(f"[MQTT] Down ({exc}). Retrying in {RETRY_INTERVAL}s …")
+            print(f"[MQTT] Down ({exc}). Retrying in {RETRY_INTERVAL}s ?")
             time.sleep(RETRY_INTERVAL)
 
 
