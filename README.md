@@ -1,6 +1,13 @@
-# ⚡ AI-Powered Smart Grid Optimizer (DERMS Simulation)
+# ⚡ Syntaxed-IEGMS (Intelligent Energy Grid Management System)
 
-> **Hackathon MVP** · Real-time grid monitoring + ML prediction + optimization dashboard
+> **Quantexera Hackathon 2026** · Real-time grid monitoring + ML prediction + optimization dashboard
+
+### Team members:
+- Prashant Goundadkar
+- Hussain Shaikh
+- Abhishek A Pillai
+- Jagadeesh Kadlimatti
+- Yashsai Dessai
 
 ---
 
@@ -58,7 +65,7 @@ pip install -r requirements.txt
 
 ```bash
 cd backend
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 The API will be available at `http://localhost:8000`  
@@ -75,15 +82,7 @@ The simulator publishes a new grid reading every **2 seconds** via MQTT.
 
 ### 4. Open the Frontend
 
-Simply open `frontend/index.html` in your browser:
-
-```bash
-# Windows
-start frontend\index.html
-
-# macOS / Linux
-open frontend/index.html
-```
+Simply open `frontend/index.html` in your browser, or run `. . . /frontend> python -m http.server 3000` and visit `http://localhost:3000`.
 
 The dashboard auto-refreshes every 2 seconds.
 
@@ -103,7 +102,7 @@ The dashboard auto-refreshes every 2 seconds.
 
 ## 🤖 ML Model
 
-- **Algorithm**: Linear regression (`numpy.polyfit`, degree 1)
+- **Algorithm**: Linear regression (`numpy.polyfit`-style pure python implementation)
 - **Input**: Rolling window of up to 20 recent load readings
 - **Output**: Predicted next load value (MW)
 - **Rationale**: Simple, fast, explainable — ideal for a hackathon demo
@@ -138,9 +137,9 @@ The dashboard auto-refreshes every 2 seconds.
 | Layer         | Technology                        |
 |---------------|-----------------------------------|
 | Backend       | Python 3.11+, FastAPI, Uvicorn    |
-| ML            | NumPy (linear regression)         |
+| ML            | Python custom linear regression   |
 | IoT Transport | MQTT via paho-mqtt                |
-| MQTT Broker   | test.mosquitto.org (public)       |
+| MQTT Broker   | broker.hivemq.com (public)        |
 | Frontend      | HTML5, Vanilla JS, Chart.js 4     |
 | Styling       | Vanilla CSS (dark glassmorphism)  |
 | Storage       | In-memory deque (no DB required)  |
