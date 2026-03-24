@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Syntaxed-IEGMS 3D Simulation</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <!-- The 3D Canvas -->
+  <div id="canvas-container"></div>
+
+  <!-- 3D Floating Labels (Google Maps Style) -->
+  <div id="labels-container">
+    <div class="map-label" id="label-hospital">🏥 Hospital Area</div>
+    <div class="map-label" id="label-school">🏫 Educational Inst.</div>
+    <div class="map-label" id="label-industry">🏭 Industrial Zone</div>
+    <div class="map-label" id="label-residential">🏘️ Residential Block</div>
+    <div class="map-label" id="label-battery">🔋 Grid Battery</div>
+    <div class="map-label" id="label-plant1">⚡ Power Plant 1</div>
+    <div class="map-label" id="label-plant2">⚡ Power Plant 2</div>
+  </div>
+
+  <!-- UI Overlay -->
+  <div id="ui-layer">
+    <header>
+      <h1>⚡ AI Grid Orchestrator</h1>
+      <p>Multi-Entity Priority Shedding & Battery Sim</p>
+    </header>
+
+    <div class="panel time-panel">
+      <h3>Global Time Simulation (24m = 24h)</h3>
+      <div class="clock" id="clock-display">06:00</div>
+      <input type="range" id="time-slider" min="0" max="23.9" step="0.1" value="6">
+      <p class="subtext">Drag to time-travel</p>
+    </div>
+
+    <div class="panel stats-panel">
+      <h3>Grid Status: <span id="grid-status" class="status-normal">STABLE</span></h3>
+      <div class="meter-row">
+        <span>Battery Reserve (<span id="batt-val">50</span> MW):</span>
+        <div class="meter-bg"><div class="meter-fill" id="batt-meter" style="width: 25%"></div></div>
+      </div>
+      <div class="meter-row mt-2">
+        <span>Current Demand (<span id="demand-val">0</span> / 900 MW max):</span>
+        <div class="meter-bg"><div class="meter-fill" id="demand-meter" style="width: 0%; background: #ef4444"></div></div>
+      </div>
+    </div>
+
+    <div class="panel log-panel">
+      <h3>Orchestrator Action Log</h3>
+      <ul id="action-log">
+        <li>Waiting for orchestrator...</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
