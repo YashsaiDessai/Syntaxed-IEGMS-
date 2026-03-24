@@ -145,6 +145,12 @@
     .badge-purple { background:rgba(168,85,247,0.1); color:var(--purple); border:1px solid rgba(168,85,247,0.2); }
 
     canvas { width:100%!important; display:block; }
+    .chart-fixed {
+      width: 100%!important;
+      height: var(--chart-height, 200px)!important;
+      min-height: var(--chart-height, 200px);
+      max-height: var(--chart-height, 200px);
+    }
 
     /* ─── Battery Gauge ─── */
     .battery-container { display:flex; flex-direction:column; align-items:center; padding:20px; }
@@ -404,7 +410,7 @@
         <div class="panel-title"><span class="panel-icon">📈</span> Real-Time Energy Flow (24h)</div>
         <span class="panel-badge badge-cyan">● LIVE</span>
       </div>
-      <div class="panel-body" style="padding:16px"><canvas id="energyChart" height="200"></canvas></div>
+      <div class="panel-body" style="padding:16px"><canvas id="energyChart" class="chart-fixed" style="--chart-height:200px" height="200"></canvas></div>
     </div>
     <div class="panel">
       <div class="panel-header">
@@ -412,7 +418,7 @@
         <span class="panel-badge badge-green">REAL-TIME</span>
       </div>
       <div class="panel-body">
-        <canvas id="mixChart" height="180"></canvas>
+        <canvas id="mixChart" class="chart-fixed" style="--chart-height:180px" height="180"></canvas>
         <div class="bar-row" style="margin-top:16px">
           <div class="bar-item"><div class="bar-meta"><span class="name">Solar PV</span><span class="val" id="mix-solar">318 kW</span></div><div class="bar-track"><div class="bar-fill" id="bar-solar" style="width:38%;background:var(--green)"></div></div></div>
           <div class="bar-item"><div class="bar-meta"><span class="name">Battery Discharge</span><span class="val" id="mix-batt">210 kW</span></div><div class="bar-track"><div class="bar-fill" id="bar-batt" style="width:25%;background:var(--cyan)"></div></div></div>
@@ -448,11 +454,11 @@
     </div>
     <div class="panel">
       <div class="panel-header"><div class="panel-title"><span class="panel-icon">📊</span> Today vs Forecast</div><span class="panel-badge badge-purple">ML MODEL</span></div>
-      <div class="panel-body" style="padding:14px"><canvas id="todayChart" height="160"></canvas></div>
+      <div class="panel-body" style="padding:14px"><canvas id="todayChart" class="chart-fixed" style="--chart-height:160px" height="160"></canvas></div>
     </div>
     <div class="panel">
       <div class="panel-header"><div class="panel-title"><span class="panel-icon">💰</span> Cost Savings</div><span class="panel-badge badge-green">THIS MONTH</span></div>
-      <div class="panel-body"><canvas id="savingsChart" height="160"></canvas></div>
+      <div class="panel-body"><canvas id="savingsChart" class="chart-fixed" style="--chart-height:160px" height="160"></canvas></div>
     </div>
   </div>
 </div>
@@ -463,7 +469,7 @@
 <div class="page" id="page-monitoring">
   <div class="section-label">IoT Sensor Network</div>
   <div class="grid-2" style="margin-bottom:16px">
-    <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">📡</span> Live Sensor Data</div><span class="panel-badge badge-cyan">MQTT STREAM</span></div><div class="panel-body"><canvas id="sensorChart" height="220"></canvas></div></div>
+    <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">📡</span> Live Sensor Data</div><span class="panel-badge badge-cyan">MQTT STREAM</span></div><div class="panel-body"><canvas id="sensorChart" class="chart-fixed" style="--chart-height:220px" height="220"></canvas></div></div>
     <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">🗺️</span> Node Status Map</div><span class="panel-badge badge-green">12/12 Online</span></div><div class="panel-body"><canvas id="nodeMap" height="220"></canvas></div></div>
   </div>
   <div class="grid-3b">
@@ -505,8 +511,8 @@
     <div class="fm-card"><div class="fm-label">Next 24h Demand</div><div class="fm-value" style="color:var(--cyan)">18.6 MWh</div><div class="fm-sub">±2.1% confidence interval</div></div>
   </div>
   <div class="grid-2">
-    <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">🤖</span> 48-Hour Load Forecast</div><span class="panel-badge badge-purple">LSTM MODEL</span></div><div class="panel-body" style="padding:14px"><canvas id="forecastChart" height="220"></canvas></div></div>
-    <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">📉</span> Forecast vs Actual</div><span class="panel-badge badge-green">MAE: 26.1 kW</span></div><div class="panel-body" style="padding:14px"><canvas id="errorChart" height="220"></canvas></div></div>
+    <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">🤖</span> 48-Hour Load Forecast</div><span class="panel-badge badge-purple">LSTM MODEL</span></div><div class="panel-body" style="padding:14px"><canvas id="forecastChart" class="chart-fixed" style="--chart-height:220px" height="220"></canvas></div></div>
+    <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">📉</span> Forecast vs Actual</div><span class="panel-badge badge-green">MAE: 26.1 kW</span></div><div class="panel-body" style="padding:14px"><canvas id="errorChart" class="chart-fixed" style="--chart-height:220px" height="220"></canvas></div></div>
   </div>
   <div class="grid-2">
     <div class="panel">
@@ -522,7 +528,7 @@
         </div>
       </div>
     </div>
-    <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">📅</span> Weekly Demand Pattern</div></div><div class="panel-body" style="padding:14px"><canvas id="weeklyChart" height="180"></canvas></div></div>
+    <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">📅</span> Weekly Demand Pattern</div></div><div class="panel-body" style="padding:14px"><canvas id="weeklyChart" class="chart-fixed" style="--chart-height:180px" height="180"></canvas></div></div>
   </div>
 </div>
 
@@ -547,7 +553,7 @@
         </div>
       </div>
     </div>
-    <div class="panel" style="grid-column:span 2"><div class="panel-header"><div class="panel-title"><span class="panel-icon">📈</span> SoC & Voltage History (24h)</div></div><div class="panel-body" style="padding:14px"><canvas id="socChart" height="200"></canvas></div></div>
+    <div class="panel" style="grid-column:span 2"><div class="panel-header"><div class="panel-title"><span class="panel-icon">📈</span> SoC & Voltage History (24h)</div></div><div class="panel-body" style="padding:14px"><canvas id="socChart" class="chart-fixed" style="--chart-height:200px" height="200"></canvas></div></div>
   </div>
   <div class="grid-3b">
     <div class="panel">
@@ -562,7 +568,7 @@
         <div style="font-size:12px;color:var(--text2);margin-top:12px;padding:8px;background:rgba(0,255,136,0.06);border-radius:6px;border-left:3px solid var(--green)">✅ Estimated remaining life: <strong style="color:var(--green)">7.2 years</strong></div>
       </div>
     </div>
-    <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">🔬</span> Cell Analytics</div></div><div class="panel-body" style="padding:14px"><canvas id="cellChart" height="180"></canvas></div></div>
+    <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">🔬</span> Cell Analytics</div></div><div class="panel-body" style="padding:14px"><canvas id="cellChart" class="chart-fixed" style="--chart-height:180px" height="180"></canvas></div></div>
     <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">⚙️</span> Charge Schedule</div><span class="panel-badge badge-cyan">AUTO</span></div><div class="panel-body" style="padding:0"><table><thead><tr><th>Time</th><th>Mode</th><th>Power</th><th>Reason</th></tr></thead><tbody id="schedule-table"></tbody></table></div></div>
   </div>
 </div>
@@ -608,7 +614,7 @@
     </div>
   </div>
   <div class="grid-2">
-    <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">📊</span> Peak Shaving Performance</div></div><div class="panel-body" style="padding:14px"><canvas id="peakChart" height="200"></canvas></div></div>
+    <div class="panel"><div class="panel-header"><div class="panel-title"><span class="panel-icon">📊</span> Peak Shaving Performance</div></div><div class="panel-body" style="padding:14px"><canvas id="peakChart" class="chart-fixed" style="--chart-height:200px" height="200"></canvas></div></div>
     <div class="panel">
       <div class="panel-header"><div class="panel-title"><span class="panel-icon">⚙️</span> Grid Parameters</div></div>
       <div class="panel-body">
@@ -783,27 +789,32 @@ Chart.defaults.font.size=11;
 
 function buildEnergyChart(){
   const ctx=document.getElementById('energyChart'); if(!ctx)return;
+  if(charts.energy){ charts.energy.resize(); return; }
   charts.energy=new Chart(ctx,{type:'line',data:{labels:labels24(),datasets:[
     {label:'Grid Load (kW)',data:[...state.loadHistory],borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,0.08)',borderWidth:2,fill:true,tension:0.4,pointRadius:0},
     {label:'Solar (kW)',data:[...state.solarHistory],borderColor:'#00ff88',backgroundColor:'rgba(0,255,136,0.06)',borderWidth:2,fill:true,tension:0.4,pointRadius:0},
     {label:'Peak Limit',data:Array(24).fill(850),borderColor:'rgba(255,64,96,0.6)',borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false}
-  ]},options:{responsive:true,animation:{duration:300},plugins:{legend:{labels:{boxWidth:12,padding:16}}},scales:{x:{grid:{color:'rgba(0,212,255,0.05)'}},y:{grid:{color:'rgba(0,212,255,0.05)'},min:0,max:1200,ticks:{callback:v=>v+'kW'}}}}});
+  ]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},plugins:{legend:{labels:{boxWidth:12,padding:16}}},scales:{x:{grid:{color:'rgba(0,212,255,0.05)'}},y:{grid:{color:'rgba(0,212,255,0.05)'},min:0,max:1200,ticks:{callback:v=>v+'kW'}}}}});
 }
 function buildMixChart(){
   const ctx=document.getElementById('mixChart'); if(!ctx)return;
-  charts.mix=new Chart(ctx,{type:'doughnut',data:{labels:['Solar PV','Battery Discharge','Grid Import'],datasets:[{data:[318,210,314],backgroundColor:['rgba(0,255,136,0.7)','rgba(0,212,255,0.7)','rgba(255,184,0,0.7)'],borderColor:['#00ff88','#00d4ff','#ffb800'],borderWidth:2}]},options:{responsive:true,cutout:'65%',plugins:{legend:{display:false}}}});
+  if(charts.mix){ charts.mix.resize(); return; }
+  charts.mix=new Chart(ctx,{type:'doughnut',data:{labels:['Solar PV','Battery Discharge','Grid Import'],datasets:[{data:[318,210,314],backgroundColor:['rgba(0,255,136,0.7)','rgba(0,212,255,0.7)','rgba(255,184,0,0.7)'],borderColor:['#00ff88','#00d4ff','#ffb800'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false}}}});
 }
 function buildTodayChart(){
   const ctx=document.getElementById('todayChart'); if(!ctx)return;
+  if(charts.today){ charts.today.resize(); return; }
   const forecast=state.loadHistory.map(v=>v+rand(-30,30));
   charts.today=new Chart(ctx,{type:'bar',data:{labels:labels24(),datasets:[{label:'Actual',data:[...state.loadHistory],backgroundColor:'rgba(0,212,255,0.5)',borderRadius:3},{label:'Forecast',data:forecast,type:'line',borderColor:'rgba(255,184,0,0.8)',borderWidth:1.5,pointRadius:0,tension:0.4,fill:false}]},options:{responsive:true,plugins:{legend:{labels:{boxWidth:10,padding:12}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8}},y:{grid:{color:'rgba(0,212,255,0.05)'},ticks:{callback:v=>v+'kW'}}}}});
 }
 function buildSavingsChart(){
   const ctx=document.getElementById('savingsChart'); if(!ctx)return;
+  if(charts.savings){ charts.savings.resize(); return; }
   charts.savings=new Chart(ctx,{type:'bar',data:{labels:['Aug','Sep','Oct','Nov','Dec','Jan'],datasets:[{label:'Peak Shaving (₹k)',data:[38,42,51,47,55,61],backgroundColor:'rgba(168,85,247,0.6)',borderRadius:4},{label:'Renewable Opt (₹k)',data:[12,18,22,19,26,31],backgroundColor:'rgba(0,255,136,0.6)',borderRadius:4}]},options:{responsive:true,plugins:{legend:{labels:{boxWidth:10,padding:10}}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(0,212,255,0.05)'},ticks:{callback:v=>'₹'+v+'k'}}}}});
 }
 function buildSensorChart(){
   const ctx=document.getElementById('sensorChart'); if(!ctx)return;
+  if(charts.sensor){ charts.sensor.resize(); return; }
   const pts=60; const t=Array.from({length:pts},(_,i)=>i);
   charts.sensor=new Chart(ctx,{type:'line',data:{labels:t,datasets:[{label:'Node-01 (kW)',data:t.map(()=>rand(200,350)),borderColor:'#00d4ff',borderWidth:1.5,fill:false,tension:0.3,pointRadius:0},{label:'Node-02 (kW)',data:t.map(()=>rand(150,280)),borderColor:'#00ff88',borderWidth:1.5,fill:false,tension:0.3,pointRadius:0},{label:'Node-03 (kW)',data:t.map(()=>rand(80,180)),borderColor:'#ffb800',borderWidth:1.5,fill:false,tension:0.3,pointRadius:0}]},options:{responsive:true,animation:{duration:200},plugins:{legend:{labels:{boxWidth:10,padding:12}}},scales:{x:{display:false},y:{grid:{color:'rgba(0,212,255,0.05)'},ticks:{callback:v=>v+'kW'}}}}});
 }
@@ -822,10 +833,12 @@ function buildNodeMap(){
 }
 function buildSocChart(){
   const ctx=document.getElementById('socChart'); if(!ctx)return;
+  if(charts.soc){ charts.soc.resize(); return; }
   charts.soc=new Chart(ctx,{type:'line',data:{labels:labels24(),datasets:[{label:'SoC (%)',data:[...state.socHistory],borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,0.08)',borderWidth:2,fill:true,tension:0.4,pointRadius:0,yAxisID:'y'}]},options:{responsive:true,plugins:{legend:{labels:{boxWidth:10}}},scales:{y:{min:0,max:100,grid:{color:'rgba(0,212,255,0.05)'},ticks:{callback:v=>v+'%'}},x:{grid:{color:'rgba(0,212,255,0.05)'}}}}});
 }
 function buildCellChart(){
   const ctx=document.getElementById('cellChart'); if(!ctx)return;
+  if(charts.cell){ charts.cell.resize(); return; }
   const cells=Array.from({length:12},(_,i)=>({label:'C'+(i+1),v:rand(3.6,3.9)}));
   charts.cell=new Chart(ctx,{type:'bar',data:{labels:cells.map(c=>c.label),datasets:[{label:'Cell Voltage (V)',data:cells.map(c=>c.v.toFixed(3)),backgroundColor:'rgba(0,212,255,0.6)',borderRadius:3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{min:3.4,max:4.0,grid:{color:'rgba(0,212,255,0.05)'},ticks:{callback:v=>v+'V'}}}}});
 }
@@ -840,19 +853,23 @@ function buildScheduleTable(){
 }
 function buildForecastChart(){
   const ctx=document.getElementById('forecastChart'); if(!ctx)return;
+  if(charts.forecast){ charts.forecast.resize(); return; }
   const lbl=[...labels24(),...labels24()];
   charts.forecast=new Chart(ctx,{type:'line',data:{labels:lbl,datasets:[{label:'Forecast (kW)',data:lbl.map((_,i)=>400+500*Math.sin((i-6)*Math.PI/12)**2+rand(-30,30)),borderColor:'#a855f7',backgroundColor:'rgba(168,85,247,0.06)',borderWidth:2,fill:true,tension:0.4,pointRadius:0},{label:'Confidence Band',data:lbl.map((_,i)=>400+500*Math.sin((i-6)*Math.PI/12)**2+80+rand(0,20)),borderColor:'rgba(168,85,247,0.3)',borderDash:[4,4],borderWidth:1,pointRadius:0,fill:false}]},options:{responsive:true,plugins:{legend:{labels:{boxWidth:10}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:12}},y:{grid:{color:'rgba(0,212,255,0.05)'},ticks:{callback:v=>v+'kW'}}}}});
 }
 function buildErrorChart(){
   const ctx=document.getElementById('errorChart'); if(!ctx)return;
+  if(charts.err){ charts.err.resize(); return; }
   charts.err=new Chart(ctx,{type:'bar',data:{labels:labels24(),datasets:[{label:'Error (kW)',data:Array.from({length:24},()=>rand(-60,60)),backgroundColor:ctx2=>ctx2.raw>=0?'rgba(0,212,255,0.6)':'rgba(255,64,96,0.6)',borderRadius:3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(0,212,255,0.05)'},ticks:{callback:v=>v+'kW'}}}}});
 }
 function buildWeeklyChart(){
   const ctx=document.getElementById('weeklyChart'); if(!ctx)return;
+  if(charts.weekly){ charts.weekly.resize(); return; }
   charts.weekly=new Chart(ctx,{type:'line',data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],datasets:[{label:'This Week',data:[820,870,910,850,930,640,580],borderColor:'#00d4ff',borderWidth:2,fill:false,tension:0.3},{label:'Last Week',data:[800,840,890,820,900,620,560],borderColor:'rgba(0,212,255,0.3)',borderDash:[4,4],borderWidth:1.5,fill:false,tension:0.3}]},options:{responsive:true,plugins:{legend:{labels:{boxWidth:10}}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(0,212,255,0.05)'},ticks:{callback:v=>v+'kW'}}}}});
 }
 function buildPeakChart(){
   const ctx=document.getElementById('peakChart'); if(!ctx)return;
+  if(charts.peak){ charts.peak.resize(); return; }
   charts.peak=new Chart(ctx,{type:'line',data:{labels:labels24(),datasets:[{label:'Actual Load',data:[...state.loadHistory],borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,0.08)',borderWidth:2,fill:true,tension:0.4,pointRadius:0},{label:'After Peak Shaving',data:state.loadHistory.map(v=>Math.min(v,850)),borderColor:'#00ff88',borderWidth:2,fill:false,tension:0.4,pointRadius:0},{label:'Threshold',data:Array(24).fill(850),borderColor:'rgba(255,64,96,0.5)',borderDash:[6,3],borderWidth:1.5,pointRadius:0,fill:false}]},options:{responsive:true,plugins:{legend:{labels:{boxWidth:10}}},scales:{x:{grid:{color:'rgba(0,212,255,0.05)'}},y:{grid:{color:'rgba(0,212,255,0.05)'},min:0,ticks:{callback:v=>v+'kW'}}}}});
 }
 function buildHeatmap(){
@@ -931,6 +948,7 @@ function showPage(name,btn){
   if(pg)pg.classList.add('active');
   if(btn)btn.classList.add('active');
   setTimeout(()=>{
+    if(name==='dashboard'){buildEnergyChart();buildMixChart();buildTodayChart();buildSavingsChart();}
     if(name==='monitoring'){buildSensorChart();buildNodeMap();buildDeviceTable();buildHeatmap();}
     if(name==='forecast'){buildForecastChart();buildErrorChart();buildWeeklyChart();}
     if(name==='battery'){buildSocChart();buildCellChart();buildScheduleTable();}
