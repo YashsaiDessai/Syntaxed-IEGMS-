@@ -270,28 +270,22 @@ window.addEventListener('click', (event) => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-// PART 2: PAGE & VIEW NAVIGATION
+// PART 2: PAGE NAVIGATION & UI MANAGEMENT
 // ════════════════════════════════════════════════════════════════════════════
 
-function showViewMode(mode) {
-    document.querySelectorAll('.view-mode').forEach(el => el.classList.remove('active'));
-    const viewEl = document.getElementById(`view-${mode}`);
-    if (viewEl) viewEl.classList.add('active');
-    document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
-    if (event && event.target) event.target.classList.add('active');
-    if (mode === 'visualization') {
-        window.setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
-    }
-}
-
 function showPage(pageId) {
-    document.querySelectorAll('.view-mode').forEach(el => el.classList.remove('active'));
-    document.getElementById('dashboard-container').classList.add('active');
+    // Hide all pages
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    
+    // Show the requested page
     const pageEl = document.getElementById(`page-${pageId}`);
     if (pageEl) pageEl.classList.add('active');
+    
+    // Update nav tabs
     document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
     if (event && event.target) event.target.classList.add('active');
+    
+    // Initialize charts for this page with delay
     window.setTimeout(() => {
         if (pageId === 'dashboard') {
             buildEnergyChart(); buildSocChart(); buildMixChart(); updateDashboardKPIs();
@@ -304,6 +298,8 @@ function showPage(pageId) {
         } else if (pageId === 'control') {
             buildScheduleTable(); renderAlerts();
         } else if (pageId === 'simulation') {
+            // Simulation page with 3D - trigger resize for renderer
+            window.setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
             buildPeakChart();
         }
     }, 200);
