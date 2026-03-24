@@ -1,527 +1,549 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Syntaxed-IEGMS — AI Smart Grid Energy Management</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Syntaxed-IEGMS — AI Smart Grid Energy Storage System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap');
 
-    :root {
-      --bg: #050d1a;
-      --bg2: #091428;
-      --bg3: #0d1f3c;
-      --panel: rgba(13,31,60,0.85);
-      --border: rgba(0,212,255,0.15);
-      --border2: rgba(0,212,255,0.35);
-      --cyan: #00d4ff;
-      --cyan2: #00fff7;
-      --green: #00ff88;
-      --amber: #ffb800;
-      --red: #ff4060;
-      --purple: #a855f7;
-      --text: #c8e6f5;
-      --text2: #6fa8cc;
-      --glow: 0 0 20px rgba(0,212,255,0.3);
-      --glow2: 0 0 40px rgba(0,212,255,0.2);
-    }
+  :root {
+    --bg: #050d1a;
+    --bg2: #091428;
+    --bg3: #0d1f3c;
+    --panel: rgba(13,31,60,0.85);
+    --border: rgba(0,212,255,0.15);
+    --border2: rgba(0,212,255,0.35);
+    --cyan: #00d4ff;
+    --cyan2: #00fff7;
+    --green: #00ff88;
+    --amber: #ffb800;
+    --red: #ff4060;
+    --purple: #a855f7;
+    --text: #c8e6f5;
+    --text2: #6fa8cc;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+    --glow2: 0 0 40px rgba(0,212,255,0.2);
+  }
 
-    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Exo 2', sans-serif;
-      min-height: 100vh;
-      overflow: hidden;
-    }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-    body::before {
-      content:'';
-      position:fixed; inset:0;
-      background-image:
-        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events:none; z-index:0;
-    }
+  /* Grid background */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events:none; z-index:0;
+  }
 
-    body::after {
-      content:'';
-      position:fixed; inset:0;
-      background:
-        radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.06) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 20%, rgba(168,85,247,0.05) 0%, transparent 40%),
-        radial-gradient(ellipse at 60% 80%, rgba(0,255,136,0.04) 0%, transparent 40%);
-      pointer-events:none; z-index:0;
-    }
+  /* Animated circuit traces */
+  body::after {
+    content:'';
+    position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(168,85,247,0.05) 0%, transparent 40%),
+      radial-gradient(ellipse at 60% 80%, rgba(0,255,136,0.04) 0%, transparent 40%);
+    pointer-events:none; z-index:0;
+  }
 
-    .topbar {
-      position:sticky; top:0; z-index:100;
-      background: rgba(5,13,26,0.95);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border2);
-      padding: 0 24px;
-      display:flex; align-items:center; justify-content:space-between;
-      height:60px;
-      box-shadow: 0 4px 30px rgba(0,0,0,0.5), 0 1px 0 rgba(0,212,255,0.2);
-    }
+  /* ── TOPBAR ── */
+  .topbar {
+    position:sticky; top:0; z-index:100;
+    background: rgba(5,13,26,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border2);
+    padding: 0 24px;
+    display:flex; align-items:center; justify-content:space-between;
+    height:60px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5), 0 1px 0 rgba(0,212,255,0.2);
+  }
 
-    .logo {
-      display:flex; align-items:center; gap:12px;
-    }
-    .logo-icon {
-      width:36px; height:36px;
-      background: linear-gradient(135deg, var(--cyan), var(--purple));
-      border-radius:8px;
-      display:flex; align-items:center; justify-content:center;
-      font-size:18px;
-      box-shadow: var(--glow);
-    }
-    .logo-text {
-      font-family:'Rajdhani', sans-serif;
-      font-weight:700; font-size:20px;
-      color:#fff;
-      letter-spacing:2px;
-    }
-    .logo-sub { font-size:11px; color:var(--text2); letter-spacing:1px; }
+  .logo {
+    display:flex; align-items:center; gap:12px;
+  }
+  .logo-icon {
+    width:36px; height:36px;
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px;
+    box-shadow: var(--glow);
+  }
+  .logo-text {
+    font-family:'Rajdhani', sans-serif;
+    font-weight:700; font-size:20px;
+    color:#fff;
+    letter-spacing:2px;
+  }
+  .logo-sub { font-size:11px; color:var(--text2); letter-spacing:1px; }
 
-    .nav-tabs {
-      display:flex; gap:4px;
-    }
-    .nav-tab {
-      padding:6px 16px;
-      border:none; background:transparent;
-      color:var(--text2); font-family:'Exo 2',sans-serif;
-      font-size:13px; letter-spacing:1px;
-      cursor:pointer; border-radius:6px;
-      transition: all 0.3s;
-    }
-    .nav-tab:hover { color:var(--cyan); background:rgba(0,212,255,0.08); }
-    .nav-tab.active {
-      color:#fff;
-      background:rgba(0,212,255,0.12);
-      border-bottom: 2px solid var(--cyan);
-    }
+  .nav-tabs {
+    display:flex; gap:4px;
+  }
+  .nav-tab {
+    padding:6px 16px;
+    border:none; background:transparent;
+    color:var(--text2); font-family:'Exo 2',sans-serif;
+    font-size:13px; letter-spacing:1px;
+    cursor:pointer; border-radius:6px;
+    transition: all 0.2s;
+  }
+  .nav-tab:hover { color:var(--cyan); background:rgba(0,212,255,0.08); }
+  .nav-tab.active {
+    color:var(--cyan); background:rgba(0,212,255,0.12);
+    border-bottom:2px solid var(--cyan);
+  }
 
-    .topbar-right {
-      display:flex; align-items:center; gap:20px;
-    }
-    .status-pill {
-      display:flex; align-items:center; gap:8px;
-      padding: 6px 12px;
-      background:rgba(0,212,255,0.05);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      font-size:12px;
-    }
-    .status-dot {
-      width:8px; height:8px;
-      border-radius:50%;
-      background:#00ff88;
-      box-shadow: 0 0 8px #00ff88;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity:0.6; }
-      50% { opacity:1; }
-    }
-    .time-display {
-      font-family:'Share Tech Mono', monospace;
-      font-size:13px;
-      color:var(--cyan);
-      letter-spacing:2px;
-    }
+  .topbar-right {
+    display:flex; align-items:center; gap:16px;
+  }
+  .status-pill {
+    display:flex; align-items:center; gap:6px;
+    background:rgba(0,255,136,0.1);
+    border:1px solid rgba(0,255,136,0.3);
+    padding:4px 12px; border-radius:20px;
+    font-size:12px; color:var(--green);
+    font-family:'Share Tech Mono', monospace;
+  }
+  .status-dot {
+    width:7px; height:7px; border-radius:50%;
+    background:var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(0,255,136,0.4); }
+    50% { opacity:0.7; box-shadow:0 0 0 6px rgba(0,255,136,0); }
+  }
+  .time-display {
+    font-family:'Share Tech Mono', monospace;
+    font-size:13px; color:var(--text2);
+  }
 
-    .main-wrap {
-      display:flex;
-      height: calc(100vh - 60px);
-      position:relative;
-      z-index:1;
-    }
+  /* ── LAYOUT ── */
+  .main-wrap {
+    position:relative; z-index:1;
+    max-width:1600px; margin:0 auto;
+    padding:20px 24px;
+  }
 
-    .page { display:none; }
-    .page.active { display:block; width:100%; overflow-y:auto; padding:20px; }
+  .page { display:none; }
+  .page.active { display:block; }
 
-    #canvas-container {
-      width:100%;
-      height:100%;
-    }
+  /* ── KPI ROW ── */
+  .kpi-row {
+    display:grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap:16px; margin-bottom:20px;
+  }
 
-    #ui-layer {
-      position:absolute;
-      top:80px; left:20px;
-      width:280px;
-      display:flex;
-      flex-direction:column;
-      gap:16px;
-      pointer-events:auto;
-      z-index:50;
-    }
+  .kpi-card {
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:16px 20px;
+    position:relative; overflow:hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .kpi-card::before {
+    content:'';
+    position:absolute; top:0; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, transparent, var(--accent-color, var(--cyan)), transparent);
+  }
+  .kpi-card:hover {
+    border-color:var(--border2);
+    box-shadow: var(--glow);
+  }
+  .kpi-label {
+    font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--text2); margin-bottom:8px;
+  }
+  .kpi-value {
+    font-family:'Rajdhani',sans-serif;
+    font-size:32px; font-weight:700;
+    line-height:1;
+    color:#fff;
+  }
+  .kpi-value span { font-size:14px; color:var(--text2); font-weight:400; }
+  .kpi-delta {
+    font-size:12px; margin-top:6px;
+    display:flex; align-items:center; gap:4px;
+  }
+  .kpi-delta.up { color:var(--green); }
+  .kpi-delta.down { color:var(--red); }
+  .kpi-delta.neutral { color:var(--amber); }
 
-    .panel {
-      background:var(--panel);
-      border:1px solid var(--border);
-      border-radius:8px;
-      backdrop-filter:blur(10px);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-      transition: all 0.3s;
-    }
-    .panel:hover {
-      border-color:var(--border2);
-      box-shadow: 0 0 20px rgba(0,212,255,0.1);
-    }
+  /* ── GRID LAYOUT ── */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .grid-3 { display:grid; grid-template-columns:2fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+  .grid-3b { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
 
-    .panel h3 {
-      padding:12px 16px;
-      border-bottom: 1px solid var(--border);
-      font-size:13px;
-      font-weight:600;
-      letter-spacing:1px;
-      color:#fff;
-      margin: 0;
-    }
+  /* ── PANEL ── */
+  .panel {
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .panel-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 20px;
+    border-bottom:1px solid var(--border);
+    background:rgba(0,212,255,0.03);
+  }
+  .panel-title {
+    font-family:'Rajdhani',sans-serif;
+    font-weight:600; font-size:15px;
+    letter-spacing:1px; color:#fff;
+    display:flex; align-items:center; gap:8px;
+  }
+  .panel-icon { font-size:16px; }
+  .panel-body { padding:20px; }
+  .panel-badge {
+    font-size:11px;
+    padding:3px 8px; border-radius:10px;
+    font-family:'Share Tech Mono', monospace;
+  }
+  .badge-green { background:rgba(0,255,136,0.1); color:var(--green); border:1px solid rgba(0,255,136,0.2); }
+  .badge-cyan { background:rgba(0,212,255,0.1); color:var(--cyan); border:1px solid rgba(0,212,255,0.2); }
+  .badge-amber { background:rgba(255,184,0,0.1); color:var(--amber); border:1px solid rgba(255,184,0,0.2); }
+  .badge-red { background:rgba(255,64,96,0.1); color:var(--red); border:1px solid rgba(255,64,96,0.2); }
+  .badge-purple { background:rgba(168,85,247,0.1); color:var(--purple); border:1px solid rgba(168,85,247,0.2); }
 
-    .panel-header {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:16px;
-      border-bottom: 1px solid var(--border);
-      background:rgba(0,212,255,0.03);
-    }
+  /* ── CANVAS / CHARTS ── */
+  canvas { width:100%!important; display:block; }
 
-    .panel-title {
-      display:flex;
-      align-items:center;
-      gap:10px;
-      font-family:'Rajdhani', sans-serif;
-      font-weight:600;
-      font-size:14px;
-      color:#fff;
-      letter-spacing:1px;
-    }
+  /* ── BATTERY GAUGE ── */
+  .battery-container {
+    display:flex; flex-direction:column; align-items:center;
+    padding:20px;
+  }
+  .battery-outer {
+    width:90px; height:180px;
+    border:3px solid var(--border2);
+    border-radius:12px;
+    position:relative;
+    background:var(--bg2);
+    overflow:hidden;
+  }
+  .battery-outer::after {
+    content:'';
+    position:absolute; top:-14px; left:50%; transform:translateX(-50%);
+    width:30px; height:12px;
+    background:var(--border2);
+    border-radius:4px 4px 0 0;
+  }
+  .battery-fill {
+    position:absolute; bottom:0; left:0; right:0;
+    transition: height 1s ease, background 1s ease;
+    border-radius:0 0 9px 9px;
+  }
+  .battery-pct {
+    font-family:'Rajdhani',sans-serif;
+    font-size:28px; font-weight:700;
+    color:#fff; margin-top:12px;
+  }
+  .battery-label { font-size:12px; color:var(--text2); margin-top:4px; letter-spacing:1px; }
 
-    .panel-icon { font-size:18px; }
+  /* ── PROGRESS BARS ── */
+  .bar-row { display:flex; flex-direction:column; gap:12px; }
+  .bar-item { }
+  .bar-meta { display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px; }
+  .bar-meta .name { color:var(--text2); }
+  .bar-meta .val { font-family:'Share Tech Mono',monospace; color:#fff; font-size:12px; }
+  .bar-track {
+    height:7px; background:rgba(255,255,255,0.07); border-radius:4px; overflow:hidden;
+  }
+  .bar-fill {
+    height:100%; border-radius:4px;
+    transition: width 1s ease;
+    position:relative;
+  }
+  .bar-fill::after {
+    content:'';
+    position:absolute; right:0; top:50%; transform:translateY(-50%);
+    width:10px; height:10px; border-radius:50%;
+    background:inherit;
+    box-shadow: 0 0 8px currentColor;
+  }
 
-    .panel-body { padding:16px; }
+  /* ── ENERGY FLOW ── */
+  .flow-diagram {
+    display:flex; align-items:center; justify-content:space-around;
+    padding:16px 8px;
+    gap:8px;
+  }
+  .flow-node {
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    flex:1;
+  }
+  .flow-icon-wrap {
+    width:64px; height:64px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:26px;
+    border:2px solid var(--border2);
+    background:var(--bg3);
+    position:relative;
+    transition: box-shadow 0.3s;
+  }
+  .flow-icon-wrap.active { box-shadow:0 0 20px rgba(0,212,255,0.4); border-color:var(--cyan); }
+  .flow-icon-wrap.generating { box-shadow:0 0 20px rgba(0,255,136,0.4); border-color:var(--green); }
+  .flow-node-label { font-size:12px; color:var(--text2); letter-spacing:1px; text-align:center; }
+  .flow-node-val { font-family:'Share Tech Mono',monospace; font-size:14px; color:#fff; }
 
-    .panel-badge {
-      display:inline-block;
-      padding:4px 10px;
-      border-radius:4px;
-      font-size:11px;
-      font-weight:600;
-      letter-spacing:0.5px;
-    }
+  .flow-arrow {
+    display:flex; flex-direction:column; align-items:center;
+    gap:4px; flex:0 0 60px;
+  }
+  .arrow-line {
+    height:2px; width:100%;
+    background:linear-gradient(90deg, var(--cyan), transparent);
+    position:relative; overflow:visible;
+  }
+  .arrow-line.reverse { background:linear-gradient(90deg, transparent, var(--cyan)); }
+  .arrow-dot {
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:8px; height:8px; border-radius:50%;
+    background:var(--cyan);
+    animation: flow-anim 2s linear infinite;
+    box-shadow:0 0 8px var(--cyan);
+  }
+  @keyframes flow-anim {
+    from { left:0; } to { left:calc(100% - 8px); }
+  }
+  .flow-kw { font-size:11px; color:var(--cyan); font-family:'Share Tech Mono',monospace; }
 
-    .badge-green { background:rgba(0,255,136,0.1); color:var(--green); border:1px solid rgba(0,255,136,0.2); }
-    .badge-cyan { background:rgba(0,212,255,0.1); color:var(--cyan); border:1px solid rgba(0,212,255,0.2); }
-    .badge-amber { background:rgba(255,184,0,0.1); color:var(--amber); border:1px solid rgba(255,184,0,0.2); }
-    .badge-red { background:rgba(255,64,96,0.1); color:var(--red); border:1px solid rgba(255,64,96,0.2); }
+  /* ── ALERTS ── */
+  .alert-list { display:flex; flex-direction:column; gap:8px; }
+  .alert-item {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:10px 12px;
+    border-radius:8px;
+    font-size:13px;
+    border-left:3px solid;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:none; } }
+  .alert-item.info { background:rgba(0,212,255,0.06); border-color:var(--cyan); }
+  .alert-item.warn { background:rgba(255,184,0,0.06); border-color:var(--amber); }
+  .alert-item.error { background:rgba(255,64,96,0.06); border-color:var(--red); }
+  .alert-item.success { background:rgba(0,255,136,0.06); border-color:var(--green); }
+  .alert-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+  .alert-text { flex:1; }
+  .alert-time { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--text2); }
+  .alert-msg { margin-top:2px; }
 
-    .section-label {
-      display:flex;
-      align-items:center;
-      gap:12px;
-      margin-bottom:16px;
-      font-family:'Rajdhani', sans-serif;
-      font-weight:700;
-      font-size:15px;
-      color:#fff;
-    }
-    .section-label::after {
-      content:'';
-      flex:1;
-      height:1px;
-      background:var(--border);
-    }
+  /* ── ML FORECAST ── */
+  .forecast-meta {
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px;
+  }
+  .fm-card {
+    background:var(--bg3); border:1px solid var(--border);
+    border-radius:8px; padding:12px 16px;
+  }
+  .fm-label { font-size:11px; color:var(--text2); letter-spacing:1px; margin-bottom:4px; }
+  .fm-value { font-family:'Rajdhani',sans-serif; font-size:22px; font-weight:700; color:#fff; }
+  .fm-sub { font-size:11px; color:var(--text2); margin-top:2px; }
 
-    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
-    .grid-3 { display:grid; grid-template-columns:2fr 1fr 1fr; gap:16px; margin-bottom:16px; }
-    .grid-3b { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+  /* ── TABLE ── */
+  table { width:100%; border-collapse:collapse; }
+  th {
+    text-align:left; padding:10px 12px;
+    font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--text2); border-bottom:1px solid var(--border);
+    font-weight:600;
+  }
+  td {
+    padding:10px 12px; font-size:13px;
+    border-bottom:1px solid rgba(255,255,255,0.04);
+  }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:rgba(0,212,255,0.03); }
+  .mono { font-family:'Share Tech Mono',monospace; font-size:12px; }
 
-    .kpi-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-bottom:16px; }
+  /* ── CONTROLS / INPUTS ── */
+  .ctrl-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .ctrl-btn {
+    padding:8px 18px;
+    border:1px solid var(--border2);
+    background:rgba(0,212,255,0.06);
+    color:var(--cyan);
+    font-family:'Exo 2',sans-serif; font-size:13px;
+    border-radius:8px; cursor:pointer;
+    transition: all 0.2s; letter-spacing:1px;
+  }
+  .ctrl-btn:hover { background:rgba(0,212,255,0.15); box-shadow:var(--glow); }
+  .ctrl-btn.active, .ctrl-btn:active { background:rgba(0,212,255,0.25); }
+  .ctrl-btn.green { border-color:rgba(0,255,136,0.4); color:var(--green); background:rgba(0,255,136,0.06); }
+  .ctrl-btn.green:hover { background:rgba(0,255,136,0.15); }
+  .ctrl-btn.red { border-color:rgba(255,64,96,0.4); color:var(--red); background:rgba(255,64,96,0.06); }
+  .ctrl-btn.amber { border-color:rgba(255,184,0,0.4); color:var(--amber); background:rgba(255,184,0,0.06); }
 
-    .kpi-card {
-      background:var(--panel);
-      border:1px solid var(--border);
-      border-radius:8px;
-      padding:16px;
-      position:relative;
-      overflow:hidden;
-      transition: all 0.3s;
-    }
+  .range-group { display:flex; flex-direction:column; gap:6px; }
+  .range-group label { font-size:12px; color:var(--text2); letter-spacing:1px; }
+  input[type=range] {
+    -webkit-appearance:none; width:180px; height:5px;
+    background:rgba(0,212,255,0.15); border-radius:3px; outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance:none;
+    width:14px; height:14px; border-radius:50%;
+    background:var(--cyan); cursor:pointer;
+    box-shadow: 0 0 8px var(--cyan);
+  }
 
-    .kpi-card::before {
-      content:'';
-      position:absolute; top:0; left:0; right:0;
-      height:3px;
-      background:linear-gradient(90deg, var(--cyan), var(--green));
-    }
+  select {
+    background:var(--bg3); border:1px solid var(--border2);
+    color:var(--text); padding:7px 12px; border-radius:8px;
+    font-family:'Exo 2',sans-serif; font-size:13px; cursor:pointer;
+    outline:none;
+  }
 
-    .kpi-card:hover {
-      border-color:var(--border2);
-      box-shadow: 0 0 20px rgba(0,212,255,0.1);
-    }
+  /* ── TOGGLE SWITCH ── */
+  .toggle-row { display:flex; align-items:center; gap:10px; font-size:13px; }
+  .toggle { width:44px; height:24px; position:relative; cursor:pointer; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle-track {
+    position:absolute; inset:0;
+    background:var(--bg3); border:1px solid var(--border2);
+    border-radius:12px; transition:0.3s;
+  }
+  .toggle-thumb {
+    position:absolute; width:18px; height:18px; border-radius:50%;
+    background:var(--text2); top:2px; left:2px;
+    transition:0.3s; box-shadow:0 2px 4px rgba(0,0,0,0.5);
+  }
+  .toggle input:checked ~ .toggle-track { background:rgba(0,212,255,0.2); border-color:var(--cyan); }
+  .toggle input:checked ~ .toggle-thumb { left:22px; background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
 
-    .kpi-label { font-size:11px; color:var(--text2); letter-spacing:1px; margin-bottom:8px; }
-    .kpi-value { font-family:'Rajdhani',sans-serif; font-size:28px; font-weight:700; color:#fff; }
-    .kpi-value span { font-size:14px; color:var(--text2); font-weight:400; }
+  /* ── HEATMAP ── */
+  .heatmap { display:grid; grid-template-columns:repeat(24,1fr); gap:3px; }
+  .hm-cell {
+    aspect-ratio:1; border-radius:3px;
+    transition:opacity 0.3s;
+  }
+  .hm-labels { display:flex; justify-content:space-between; margin-top:6px; }
+  .hm-label { font-size:10px; color:var(--text2); font-family:'Share Tech Mono',monospace; }
 
-    .kpi-delta { font-size:11px; margin-top:6px; font-family:'Share Tech Mono','monospace'; }
-    .kpi-delta.up { color:var(--green); }
-    .kpi-delta.down { color:var(--red); }
-    .kpi-delta.neutral { color:var(--amber); }
+  /* ── RESPONSIVE ── */
+  @media(max-width:1100px) {
+    .kpi-row { grid-template-columns:repeat(3,1fr); }
+    .grid-3 { grid-template-columns:1fr; }
+  }
+  @media(max-width:700px) {
+    .kpi-row { grid-template-columns:repeat(2,1fr); }
+    .grid-2 { grid-template-columns:1fr; }
+    .nav-tabs { display:none; }
+    .topbar { gap:12px; }
+  }
 
-    canvas { width:100%!important; display:block; }
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width:5px; height:5px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
 
-    table { width:100%; border-collapse:collapse; }
-    th {
-      padding:12px;
-      text-align:left;
-      font-size:12px;
-      font-weight:600;
-      color:var(--cyan);
-      border-bottom:1px solid var(--border);
-      letter-spacing:1px;
-    }
-    td {
-      padding:12px;
-      border-bottom:1px solid var(--border);
-      font-size:12px;
-    }
-    tr:hover td { background:rgba(0,212,255,0.03); }
-    .mono { font-family:'Share Tech Mono',monospace; font-size:11px; }
+  /* ── PAGE TRANSITIONS ── */
+  .page { animation:fadeUp 0.3s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
 
-    .ctrl-row {
-      display:flex;
-      align-items:center;
-      gap:12px;
-      flex-wrap:wrap;
-    }
+  /* ── SoC Indicator colors ── */
+  .soc-high .battery-fill { background:linear-gradient(180deg,var(--green),#00cc66); }
+  .soc-mid .battery-fill { background:linear-gradient(180deg,var(--amber),#cc8800); }
+  .soc-low .battery-fill { background:linear-gradient(180deg,var(--red),#cc0033); }
 
-    .ctrl-btn {
-      padding:8px 16px;
-      border:1px solid rgba(0,212,255,0.4);
-      background:rgba(0,212,255,0.06);
-      color:var(--cyan);
-      border-radius:6px;
-      font-family:'Exo 2',sans-serif;
-      font-size:12px;
-      cursor:pointer;
-      transition: all 0.3s;
-      letter-spacing:0.5px;
-    }
+  /* Section label */
+  .section-label {
+    font-family:'Rajdhani',sans-serif; font-weight:700;
+    font-size:13px; letter-spacing:3px; text-transform:uppercase;
+    color:var(--text2); margin-bottom:12px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
 
-    .ctrl-btn:hover {
-      background:rgba(0,212,255,0.15);
-      box-shadow: var(--glow);
-    }
+  /* ── MODAL ── */
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.7);
+    z-index:200; display:flex; align-items:center; justify-content:center;
+    backdrop-filter:blur(4px);
+    display:none;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:var(--bg2); border:1px solid var(--border2);
+    border-radius:16px; padding:28px; max-width:480px; width:90%;
+    box-shadow:0 20px 60px rgba(0,0,0,0.6), var(--glow2);
+  }
+  .modal-title {
+    font-family:'Rajdhani',sans-serif; font-weight:700;
+    font-size:20px; color:#fff; margin-bottom:16px;
+  }
+  .modal-close {
+    float:right; background:none; border:none;
+    color:var(--text2); cursor:pointer; font-size:20px;
+    transition:color 0.2s;
+  }
+  .modal-close:hover { color:var(--red); }
+  .form-row { margin-bottom:14px; }
+  .form-label { font-size:12px; color:var(--text2); letter-spacing:1px; margin-bottom:5px; display:block; }
+  .form-input {
+    width:100%; background:var(--bg3); border:1px solid var(--border2);
+    color:var(--text); padding:9px 12px; border-radius:8px;
+    font-family:'Exo 2',sans-serif; font-size:13px; outline:none;
+  }
+  .form-input:focus { border-color:var(--cyan); box-shadow:0 0 0 3px rgba(0,212,255,0.1); }
 
-    .ctrl-btn.active {
-      background:rgba(0,212,255,0.25);
-      color:#fff;
-    }
+  /* ── 3D SIMULATION ── */
+  #canvas-container {
+    width:100%; 
+    height:calc(100vh - 60px);
+    position:relative;
+  }
 
-    .ctrl-btn.green {
-      border-color:rgba(0,255,136,0.4);
-      color:var(--green);
-      background:rgba(0,255,136,0.06);
-    }
+  #ui-layer {
+    position:absolute; top:20px; left:20px;
+    display:grid; grid-template-columns:repeat(2, 280px);
+    gap:16px; z-index:50;
+    pointer-events: none;
+  }
 
-    .ctrl-btn.red {
-      border-color:rgba(255,64,96,0.4);
-      color:var(--red);
-      background:rgba(255,64,96,0.06);
-    }
+  #ui-layer .panel { pointer-events: auto; }
+  #ui-layer h3 {
+    font-family:'Rajdhani', sans-serif;
+    font-weight:700; font-size:14px;
+    letter-spacing:1px; color:var(--cyan);
+    margin-bottom:0;
+  }
 
-    .ctrl-btn.amber {
-      border-color:rgba(255,184,0,0.4);
-      color:var(--amber);
-      background:rgba(255,184,0,0.06);
-    }
+  .meter-row {
+    display:flex; flex-direction:column; gap:4px; margin-bottom:12px;
+  }
+  .meter-row span { font-size:12px; color:var(--text); }
+  .meter-bg {
+    height:8px; background:rgba(0,212,255,0.1); border-radius:4px; overflow:hidden;
+  }
+  .meter-fill {
+    height:100%; background:linear-gradient(90deg, var(--cyan), var(--green));
+    border-radius:4px; transition:width 0.3s;
+  }
 
-    ::-webkit-scrollbar { width:6px; }
-    ::-webkit-scrollbar-track { background:var(--bg); }
-    ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
-
-    input[type=range] {
-      width:100%;
-      height:6px;
-      border-radius:3px;
-      background:var(--border);
-      outline:none;
-      -webkit-appearance:none;
-    }
-
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance:none;
-      width:14px;
-      height:14px;
-      border-radius:50%;
-      background:var(--cyan);
-      cursor:pointer;
-      box-shadow: 0 0 10px var(--cyan);
-    }
-
-    select {
-      padding:8px 12px;
-      border:1px solid var(--border);
-      background:rgba(13,31,60,0.5);
-      color:var(--text);
-      border-radius:6px;
-      font-family:'Exo 2',sans-serif;
-      cursor:pointer;
-    }
-
-    .alert-list {
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-    }
-
-    .alert-item {
-      display:flex;
-      gap:10px;
-      padding:12px;
-      border:1px solid;
-      border-radius:6px;
-      font-size:12px;
-      animation: slideIn 0.3s ease;
-    }
-
-    @keyframes slideIn {
-      from { opacity:0; transform:translateX(-10px); }
-      to { opacity:1; transform:none; }
-    }
-
-    .alert-item.info { background:rgba(0,212,255,0.06); border-color:var(--cyan); }
-    .alert-item.warn { background:rgba(255,184,0,0.06); border-color:var(--amber); }
-    .alert-item.error { background:rgba(255,64,96,0.06); border-color:var(--red); }
-    .alert-item.success { background:rgba(0,255,136,0.06); border-color:var(--green); }
-
-    .alert-icon { font-size:14px; flex-shrink:0; }
-    .alert-text { flex:1; }
-    .alert-time { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--text2); }
-
-    .bar-row { display:flex; flex-direction:column; gap:12px; }
-    .bar-item { }
-    .bar-meta { display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px; }
-    .bar-meta .name { color:var(--text2); }
-    .bar-meta .val { font-family:'Share Tech Mono',monospace; color:#fff; font-size:11px; }
-
-    .bar-track {
-      height:6px;
-      background:rgba(0,212,255,0.1);
-      border-radius:3px;
-      overflow:hidden;
-    }
-
-    .bar-fill {
-      height:100%;
-      background:linear-gradient(90deg, var(--cyan), var(--green));
-      transition: width 0.3s;
-      box-shadow: 0 0 10px var(--cyan);
-    }
-
-    .meter-row {
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      margin-bottom:10px;
-    }
-
-    .meter-row span { font-size: 12px; color: var(--text2); }
-
-    .meter-bg {
-      height:6px;
-      background:rgba(0,212,255,0.1);
-      border-radius:3px;
-      overflow:hidden;
-    }
-
-    .meter-fill {
-      height:100%;
-      background:linear-gradient(90deg, var(--cyan), var(--green));
-      box-shadow: 0 0 10px var(--cyan);
-      transition: width 0.3s;
-    }
-
-    .map-label {
-      position:absolute;
-      background:rgba(13,31,60,0.9);
-      border:1px solid var(--border2);
-      border-radius:6px;
-      padding:8px 12px;
-      font-size:12px;
-      pointer-events:none;
-      color:var(--cyan);
-      display:flex;
-      align-items:center;
-      gap:6px;
-      z-index:40;
-    }
-
-    .modal-overlay {
-      display:none;
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,0.7);
-      backdrop-filter:blur(5px);
-      z-index:200;
-      align-items:center;
-      justify-content:center;
-    }
-
-    .modal-overlay.open { display:flex; }
-
-    .modal {
-      background:var(--panel);
-      border:1px solid var(--border2);
-      border-radius:12px;
-      width:90%;
-      max-width:600px;
-      max-height:80vh;
-      overflow-y:auto;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-    }
-
-    .modal-title {
-      padding:20px;
-      border-bottom:1px solid var(--border);
-      font-family:'Rajdhani',sans-serif;
-      font-weight:700;
-      font-size:18px;
-    }
-
-    .modal-close {
-      position:absolute;
-      top:20px; right:20px;
-      background:none;
-      border:none;
-      color:var(--text2);
-      font-size:24px;
-      cursor:pointer;
-      transition: color 0.3s;
-    }
-
-    .modal-close:hover { color:var(--red); }
-
-    .range-group {
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-
-    .range-group label {
-      font-size:12px;
-      color:var(--text2);
-      letter-spacing:0.5px;
-    }
-  </style>
+  #action-log li {
+    animation: slideInLog 0.3s ease;
+  }
+  @keyframes slideInLog { from { transform:translateX(-10px); opacity:0; } to { transform:none; opacity:1; } }
+</style>
 </head>
 <body>
 
@@ -530,211 +552,200 @@
   <div class="logo">
     <div class="logo-icon">⚡</div>
     <div>
-      <div class="logo-text">SYNTAXED-IEGMS</div>
-      <div class="logo-sub">AI Grid Orchestrator & DERMS</div>
+      <div class="logo-text">Syntaxed-IEGMS</div>
+      <div class="logo-sub">AI SMART GRID ENERGY MANAGEMENT</div>
     </div>
   </div>
-  
   <nav class="nav-tabs">
-    <button class="nav-tab active" onclick="showPage('dashboard')">📊 Dashboard</button>
-    <button class="nav-tab" onclick="showPage('monitoring')">📡 IoT Monitoring</button>
-    <button class="nav-tab" onclick="showPage('forecast')">🤖 ML Forecast</button>
-    <button class="nav-tab" onclick="showPage('battery')">🔋 Battery</button>
-    <button class="nav-tab" onclick="showPage('control')">⚙️ Control</button>
-    <button class="nav-tab" onclick="showPage('simulation')">🎬 Simulation Model</button>
+    <button class="nav-tab active" onclick="showPage('dashboard',this)">Dashboard</button>
+    <button class="nav-tab" onclick="showPage('monitoring',this)">IoT Monitoring</button>
+    <button class="nav-tab" onclick="showPage('forecast',this)">ML Forecast</button>
+    <button class="nav-tab" onclick="showPage('battery',this)">Battery Mgmt</button>
+    <button class="nav-tab" onclick="showPage('control',this)">Control</button>
+    <button class="nav-tab" onclick="showPage('simulation',this)">🎬 Simulation Model</button>
   </nav>
-  
   <div class="topbar-right">
     <div class="status-pill">
-      <span class="status-dot"></span>
-      <span id="status-text">NORMAL</span>
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">GRID ONLINE</span>
     </div>
-    <div class="time-display" id="time-display">06:00</div>
+    <div class="time-display" id="clock">--:--:--</div>
   </div>
 </div>
 
 <div class="main-wrap">
 
-<!-- PAGE 1: DASHBOARD -->
+<!-- ═══════════════════════════════════════════
+     PAGE: DASHBOARD
+═══════════════════════════════════════════ -->
 <div class="page active" id="page-dashboard">
-  <div class="section-label">Grid Status Dashboard</div>
-  
+
+  <!-- KPIs -->
   <div class="kpi-row">
-    <div class="kpi-card">
-      <div class="kpi-label">Total Demand</div>
-      <div class="kpi-value"><span id="kpi-demand">0</span> MW</div>
-      <div class="kpi-delta up">↑ Real-time</div>
+    <div class="kpi-card" style="--accent-color:var(--cyan)">
+      <div class="kpi-label">Grid Load</div>
+      <div class="kpi-value"><span id="kpi-demand">0</span><span> MW</span></div>
+      <div class="kpi-delta up" id="kpi-load-d">▲ Real-time</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Power Supplied</div>
-      <div class="kpi-value"><span id="kpi-supplied">0</span> MW</div>
-      <div class="kpi-delta">Balanced</div>
+    <div class="kpi-card" style="--accent-color:var(--green)">
+      <div class="kpi-label">Energy Supplied</div>
+      <div class="kpi-value"><span id="kpi-supplied">0</span><span> MW</span></div>
+      <div class="kpi-delta up" id="kpi-supplied-d">▲ From sources</div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" style="--accent-color:var(--amber)">
       <div class="kpi-label">Battery SoC</div>
-      <div class="kpi-value"><span id="kpi-soc">50</span>%</div>
-      <div class="kpi-delta">Status</div>
+      <div class="kpi-value"><span id="kpi-soc">0</span><span>%</span></div>
+      <div class="kpi-delta neutral" id="kpi-soc-d">● Optimizing</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Grid Status</div>
-      <div class="kpi-value" id="kpi-status">NORMAL</div>
-      <div class="kpi-delta" style="color: var(--green);">✓ Optimal</div>
+    <div class="kpi-card" style="--accent-color:var(--purple)">
+      <div class="kpi-label">Peak Shaved</div>
+      <div class="kpi-value"><span id="kpi-shaved">0</span><span> MW</span></div>
+      <div class="kpi-delta up">▲ Real-time</div>
+    </div>
+    <div class="kpi-card" style="--accent-color:var(--red)">
+      <div class="kpi-label">Status</div>
+      <div class="kpi-value" id="kpi-status" style="font-size:24px">--</div>
+      <div class="kpi-delta neutral">● System</div>
     </div>
   </div>
 
+  <!-- Main charts row -->
   <div class="grid-3">
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">⚡</span> Energy Load (24h)</div>
+        <div class="panel-title"><span class="panel-icon">📈</span> Real-Time Energy Flow (24h)</div>
+        <span class="panel-badge badge-cyan" id="live-badge">● LIVE</span>
       </div>
-      <div class="panel-body">
-        <canvas id="energyChart" style="height: 150px"></canvas>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">🔋</span> Battery SoC</div>
-      </div>
-      <div class="panel-body">
-        <canvas id="socChart" style="height: 150px"></canvas>
+      <div class="panel-body" style="padding:16px">
+        <canvas id="energyChart" height="200"></canvas>
       </div>
     </div>
-
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">📊</span> Energy Mix</div>
+        <div class="panel-title"><span class="panel-icon">⚡</span> Energy Mix</div>
+        <span class="panel-badge badge-green">REAL-TIME</span>
       </div>
       <div class="panel-body">
-        <canvas id="mixChart" style="height: 150px"></canvas>
+        <canvas id="mixChart" height="180"></canvas>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-icon">🔔</span> System Alerts</div>
+        <span class="panel-badge badge-amber" id="alert-count">Active</span>
+      </div>
+      <div class="panel-body" style="padding:12px">
+        <div class="alert-list" id="alert-list"></div>
       </div>
     </div>
   </div>
 
+  <!-- Bottom row -->
   <div class="grid-3b">
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">🏥</span> Hospital</div>
-        <span class="panel-badge badge-green">24/7</span>
+        <div class="panel-title"><span class="panel-icon">🌐</span> Energy Flow Diagram</div>
       </div>
-      <div class="panel-body">
-        <div class="bar-row">
-          <div class="bar-meta">
-            <span class="name">Load</span>
-            <span class="val" id="zone-hospital-load">0 MW</span>
+      <div class="panel-body" style="padding:8px">
+        <div class="flow-diagram">
+          <div class="flow-node">
+            <div class="flow-icon-wrap generating" id="fn-grid">🏭</div>
+            <div class="flow-node-label">Grid Supply</div>
+            <div class="flow-node-val" id="fn-grid-v">-- MW</div>
           </div>
-          <div class="bar-track"><div class="bar-fill" id="zone-hospital-bar" style="width:50%"></div></div>
+          <div class="flow-arrow">
+            <div class="arrow-line"><div class="arrow-dot"></div></div>
+            <div class="flow-kw">→</div>
+          </div>
+          <div class="flow-node">
+            <div class="flow-icon-wrap active" id="fn-bms">🔋</div>
+            <div class="flow-node-label">BESS</div>
+            <div class="flow-node-val" id="fn-bms-v">--%</div>
+          </div>
+          <div class="flow-arrow">
+            <div class="arrow-line"><div class="arrow-dot"></div></div>
+            <div class="flow-kw">→</div>
+          </div>
+          <div class="flow-node">
+            <div class="flow-icon-wrap active" id="fn-load">📊</div>
+            <div class="flow-node-label">Load</div>
+            <div class="flow-node-val" id="fn-load-v">-- MW</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;padding:0 12px">
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">System Status</span><span class="val" id="volt-val">--</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-volt" style="width:100%;background:var(--green)"></div></div>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">🏭</span> Industrial</div>
-        <span class="panel-badge badge-amber">6-18h</span>
+        <div class="panel-title"><span class="panel-icon">📊</span> Today Performance</div>
+        <span class="panel-badge badge-purple">REAL-TIME</span>
       </div>
-      <div class="panel-body">
-        <div class="bar-row">
-          <div class="bar-meta">
-            <span class="name">Load</span>
-            <span class="val" id="zone-industry-load">0 MW</span>
-          </div>
-          <div class="bar-track"><div class="bar-fill" id="zone-industry-bar" style="width:50%"></div></div>
-        </div>
+      <div class="panel-body" style="padding:14px">
+        <canvas id="todayChart" height="160"></canvas>
       </div>
     </div>
 
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">🏘️</span> Residential</div>
-        <span class="panel-badge badge-cyan">Variable</span>
+        <div class="panel-title"><span class="panel-icon">💰</span> Energy Stats</div>
+        <span class="panel-badge badge-green">THIS SESSION</span>
       </div>
       <div class="panel-body">
-        <div class="bar-row">
-          <div class="bar-meta">
-            <span class="name">Load</span>
-            <span class="val" id="zone-residential-load">0 MW</span>
-          </div>
-          <div class="bar-track"><div class="bar-fill" id="zone-residential-bar" style="width:50%"></div></div>
-        </div>
+        <canvas id="savingsChart" height="160"></canvas>
       </div>
     </div>
   </div>
 </div>
 
-<!-- PAGE 2: IOT MONITORING -->
+<!-- ═══════════════════════════════════════════
+     PAGE: IOT MONITORING
+═══════════════════════════════════════════ -->
 <div class="page" id="page-monitoring">
   <div class="section-label">IoT Sensor Network</div>
-
-  <div class="grid-2">
+  <div class="grid-2" style="margin-bottom:16px">
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">📍</span> Sensor Node Map</div>
+        <div class="panel-title"><span class="panel-icon">📡</span> Zone Load Monitor</div>
+        <span class="panel-badge badge-cyan">REAL-TIME</span>
       </div>
       <div class="panel-body">
-        <canvas id="nodeMap" style="height: 200px"></canvas>
+        <canvas id="sensorChart" height="220"></canvas>
       </div>
     </div>
-
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">📈</span> Sensor Readings</div>
+        <div class="panel-title"><span class="panel-icon">🗺️</span> Zone Status Map</div>
+        <span class="panel-badge badge-green">5/5 Online</span>
       </div>
       <div class="panel-body">
-        <canvas id="sensorChart" style="height: 200px"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-header">
-      <div class="panel-title"><span class="panel-icon">🖥️</span> Connected Devices</div>
-    </div>
-    <div class="panel-body">
-      <table>
-        <thead>
-          <tr>
-            <th>Device ID</th>
-            <th>Type</th>
-            <th>Protocol</th>
-            <th>Status</th>
-            <th>Last Update</th>
-          </tr>
-        </thead>
-        <tbody id="device-tbody">
-          <tr>
-            <td class="mono">NODE-001</td>
-            <td>Smart Meter</td>
-            <td><span class="panel-badge badge-cyan">MQTT</span></td>
-            <td><span class="panel-badge badge-green">Online</span></td>
-            <td class="mono">0.3s ago</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<!-- PAGE 3: ML FORECAST -->
-<div class="page" id="page-forecast">
-  <div class="section-label">Machine Learning — Load Forecasting</div>
-
-  <div class="grid-2">
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">📊</span> 24h Load Forecast</div>
-      </div>
-      <div class="panel-body">
-        <canvas id="forecastChart" style="height: 200px"></canvas>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">❌</span> Forecast Error</div>
-      </div>
-      <div class="panel-body">
-        <canvas id="errorChart" style="height: 200px"></canvas>
+        <div class="bar-row">
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Hospital Load</span><span class="val" id="zone-hospital">-- MW</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-hospital" style="width:0%;background:var(--red)"></div></div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">School Load</span><span class="val" id="zone-school">-- MW</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-school" style="width:0%;background:var(--cyan)"></div></div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Industry Load</span><span class="val" id="zone-industry">-- MW</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-industry" style="width:0%;background:var(--amber)"></div></div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Residential Load</span><span class="val" id="zone-residential">-- MW</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-residential" style="width:0%;background:var(--green)"></div></div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Battery Status</span><span class="val" id="zone-battery">--%</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-battery" style="width:0%;background:var(--purple)"></div></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -742,191 +753,374 @@
   <div class="grid-3b">
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">🎯</span> Model Accuracy</div>
+        <div class="panel-title"><span class="panel-icon">📋</span> Zone Status Report</div>
+        <div style="display:flex;gap:6px">
+          <span class="panel-badge badge-green">5 Online</span>
+        </div>
+      </div>
+      <div class="panel-body" style="padding:0">
+        <table>
+          <thead>
+            <tr><th>Zone</th><th>Load (MW)</th><th>Status</th><th>Activity</th></tr>
+          </thead>
+          <tbody id="zone-table"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-icon">📶</span> System Metrics</div>
       </div>
       <div class="panel-body">
-        <div style="text-align: center; padding: 20px 0;">
-          <div style="font-size: 32px; color: var(--green); font-weight: bold;">97.3%</div>
-          <div style="font-size: 11px; color: var(--text2); margin-top: 8px;">MAPE Error</div>
+        <div class="bar-row">
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Total Demand</span><span class="val" id="metric-demand">-- MW</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-demand" style="width:50%;background:var(--cyan)"></div></div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Energy Supplied</span><span class="val" id="metric-supplied">-- MW</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-supplied" style="width:50%;background:var(--green)"></div></div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Battery Delta</span><span class="val" id="metric-delta">-- MW</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-delta" style="width:50%;background:var(--purple)"></div></div>
+          </div>
         </div>
       </div>
     </div>
-
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">⏱️</span> Inference Time</div>
+        <div class="panel-title"><span class="panel-icon">⏱️</span> Time Status</div>
       </div>
       <div class="panel-body">
-        <div style="text-align: center; padding: 20px 0;">
-          <div style="font-size: 32px; color: var(--cyan); font-weight: bold;">0.8ms</div>
-          <div style="font-size: 11px; color: var(--text2); margin-top: 8px;">Per Query</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">📆</span> Next Retrain</div>
-      </div>
-      <div class="panel-body">
-        <div style="text-align: center; padding: 20px 0;">
-          <div style="font-size: 32px; color: var(--amber); font-weight: bold;">3.2h</div>
-          <div style="font-size: 11px; color: var(--text2); margin-top: 8px;">Scheduled</div>
+        <div style="text-align:center; padding:20px 0">
+          <div style="font-family:'Share Tech Mono',monospace; font-size:32px; color:var(--cyan); margin-bottom:8px" id="sim-time">06:00</div>
+          <div style="font-size:12px; color:var(--text2)">Simulation Hour</div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- PAGE 4: BATTERY MANAGEMENT -->
+<!-- ═══════════════════════════════════════════
+     PAGE: ML FORECAST
+═══════════════════════════════════════════ -->
+<div class="page" id="page-forecast">
+  <div class="section-label">Machine Learning — Load Forecasting Engine</div>
+
+  <div class="forecast-meta">
+    <div class="fm-card">
+      <div class="fm-label">Model Accuracy</div>
+      <div class="fm-value" style="color:var(--green)">--</div>
+      <div class="fm-sub">LSTM based</div>
+    </div>
+    <div class="fm-card">
+      <div class="fm-label">Peak Prediction</div>
+      <div class="fm-value" style="color:var(--amber)">-- MW</div>
+      <div class="fm-sub">Next 24h window</div>
+    </div>
+    <div class="fm-card">
+      <div class="fm-label">Next 24h Demand</div>
+      <div class="fm-value" style="color:var(--cyan)">-- MWh</div>
+      <div class="fm-sub">Forecasted total</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-icon">🤖</span> Load Forecast</div>
+        <span class="panel-badge badge-purple">ML MODEL</span>
+      </div>
+      <div class="panel-body" style="padding:14px">
+        <canvas id="forecastChart" height="220"></canvas>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-icon">📉</span> Forecast Error Analysis</div>
+        <span class="panel-badge badge-green">MAE Tracking</span>
+      </div>
+      <div class="panel-body" style="padding:14px">
+        <canvas id="errorChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-icon">🧠</span> Feature Importance</div>
+      </div>
+      <div class="panel-body">
+        <div class="bar-row">
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Hour of Day</span><span class="val">31%</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:31%;background:var(--cyan)"></div></div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Previous Hour Load</span><span class="val">24%</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:24%;background:var(--purple)"></div></div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Day of Week</span><span class="val">18%</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:18%;background:var(--amber)"></div></div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Zone Activity</span><span class="val">14%</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:14%;background:var(--green)"></div></div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Other Factors</span><span class="val">13%</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:13%;background:var(--red)"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-icon">📅</span> Weekly Pattern</div>
+      </div>
+      <div class="panel-body" style="padding:14px">
+        <canvas id="weeklyChart" height="180"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE: BATTERY MANAGEMENT
+═══════════════════════════════════════════ -->
 <div class="page" id="page-battery">
   <div class="section-label">Battery Energy Storage System (BESS)</div>
 
-  <div class="grid-3">
+  <div class="grid-3" style="align-items:start">
     <div class="panel">
       <div class="panel-header">
         <div class="panel-title"><span class="panel-icon">🔋</span> State of Charge</div>
-        <span class="panel-badge badge-green">HEALTHY</span>
+        <span class="panel-badge badge-green" id="soc-status">STANDBY</span>
       </div>
       <div class="panel-body">
-        <div style="text-align: center; padding: 20px 0;">
-          <div style="font-size: 32px; color: var(--green); font-weight: bold;" id="battery-energy">50</div>
-          <div style="font-size: 11px; color: var(--text2); margin-top: 4px;">MWh</div>
-          <div class="bar-track" style="margin-top: 12px;"><div class="bar-fill" id="battery-visual" style="width: 50%;"></div></div>
+        <div class="battery-container" id="battery-display">
+          <div class="battery-outer soc-high">
+            <div class="battery-fill soc-high" id="battery-fill" style="height:50%"></div>
+          </div>
+          <div class="battery-pct"><span id="soc-pct">50</span>%</div>
+          <div class="battery-label">STATE OF CHARGE</div>
         </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">⚡</span> Power Rates</div>
-      </div>
-      <div class="panel-body">
-        <div class="bar-row">
-          <div class="bar-meta">
-            <span class="name">Charge</span>
-            <span class="val">+45 MW</span>
+        <div class="bar-row" style="margin-top:16px">
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Charge Rate</span><span class="val" id="charge-rate">0 MW</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-charge" style="width:0%;background:var(--green)"></div></div>
           </div>
-          <div class="bar-meta">
-            <span class="name">Discharge</span>
-            <span class="val">-32 MW</span>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Discharge Rate</span><span class="val" id="discharge-rate">0 MW</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-discharge" style="width:0%;background:var(--amber)"></div></div>
           </div>
-          <div class="bar-meta">
-            <span class="name">Efficiency</span>
-            <span class="val">94.5%</span>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Energy Level</span><span class="val" id="energy-level">-- MWh</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-energy" style="width:50%;background:var(--cyan)"></div></div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel" style="grid-column:span 2">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">🌡️</span> Battery Health</div>
+        <div class="panel-title"><span class="panel-icon">📈</span> SoC History (24h)</div>
       </div>
-      <div class="panel-body">
-        <div style="font-size: 11px; color: var(--text2); line-height: 1.8;">
-          <div>Temperature: 28°C</div>
-          <div>Capacity: 95.2%</div>
-          <div>Cycles: 2,840</div>
-          <div style="margin-top: 8px; color: var(--green);">✓ Nominal</div>
-        </div>
+      <div class="panel-body" style="padding:14px">
+        <canvas id="socChart" height="200"></canvas>
       </div>
     </div>
   </div>
 
-  <div class="grid-2">
+  <div class="grid-3b">
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">📈</span> Weekly Discharge</div>
+        <div class="panel-title"><span class="panel-icon">❤️</span> System Health</div>
+        <span class="panel-badge badge-green">OPTIMAL</span>
       </div>
       <div class="panel-body">
-        <canvas id="weeklyChart" style="height: 150px"></canvas>
+        <div style="text-align:center;padding:10px 0">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:52px;font-weight:700;color:var(--green)" id="soh-val">--<span style="font-size:24px">%</span></div>
+          <div style="color:var(--text2);font-size:13px;margin-top:4px">System Health Status</div>
+        </div>
+        <div class="bar-row" style="margin-top:12px">
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Cycle Count</span><span class="val" id="cycle-val">--</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-cycle" style="width:30%;background:var(--cyan)"></div></div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Efficiency Loss</span><span class="val" id="loss-val">--</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-loss" style="width:15%;background:var(--amber)"></div></div>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">💰</span> Peak Shaving Savings</div>
+        <div class="panel-title"><span class="panel-icon">🔬</span> Performance Metrics</div>
       </div>
       <div class="panel-body">
-        <canvas id="savingsChart" style="height: 150px"></canvas>
+        <div class="bar-row">
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Efficiency</span><span class="val" id="eff-val">-- %</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-eff" style="width:85%;background:var(--green)"></div></div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Response Time</span><span class="val" id="resp-val">--ms</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-resp" style="width:20%;background:var(--cyan)"></div></div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-meta"><span class="name">Power Quality</span><span class="val" id="pq-val">--</span></div>
+            <div class="bar-track"><div class="bar-fill" id="bar-pq" style="width:90%;background:var(--purple)"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-icon">⚙️</span> Strategy</div>
+        <span class="panel-badge badge-cyan">AUTO</span>
+      </div>
+      <div class="panel-body">
+        <div style="font-size:12px; color:var(--text); line-height:1.8">
+          <div>📊 Peak Shaving: <span style="color:var(--green)" id="strat-peak">--</span></div>
+          <div>🔄 Load Balancing: <span style="color:var(--green)" id="strat-balance">--</span></div>
+          <div>⚡ Emergency Support: <span style="color:var(--green)" id="strat-emergency">--</span></div>
+          <div>🌱 Renewable Priority: <span style="color:var(--green)" id="strat-renewable">--</span></div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- PAGE 5: CONTROL CENTER -->
+<!-- ═══════════════════════════════════════════
+     PAGE: CONTROL
+═══════════════════════════════════════════ -->
 <div class="page" id="page-control">
   <div class="section-label">Optimization & Control Center</div>
 
   <div class="grid-2">
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">⚙️</span> Operation Mode</div>
+        <div class="panel-title"><span class="panel-icon">🎛️</span> Operation Mode</div>
       </div>
       <div class="panel-body">
-        <div class="ctrl-row">
-          <button class="ctrl-btn green" onclick="setMode('optimize')">Optimize</button>
-          <button class="ctrl-btn" onclick="setMode('manual')">Manual</button>
-          <button class="ctrl-btn red" onclick="setMode('emergency')">Emergency</button>
+        <div class="ctrl-row" style="margin-bottom:16px">
+          <button class="ctrl-btn active" onclick="setMode('auto',this)">AUTO MODE</button>
+          <button class="ctrl-btn" onclick="setMode('manual',this)">MANUAL</button>
+          <button class="ctrl-btn amber" onclick="setMode('emergency',this)">EMERGENCY</button>
         </div>
-        <div style="margin-top: 12px; font-size: 12px; color: var(--text2);">
-          Active Algorithm: <span style="color: var(--cyan);" id="active-algo">Dynamic Load Balancing</span>
+        <div style="padding:12px;background:rgba(0,212,255,0.05);border:1px solid var(--border);border-radius:8px;margin-bottom:16px">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:4px">ACTIVE ALGORITHM</div>
+          <div id="active-algo" style="font-family:'Share Tech Mono',monospace;color:var(--cyan);font-size:14px">Peak Shaving + Renewable Priority</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="range-group">
+            <label>Peak Shave Threshold: <strong id="thresh-val" style="color:var(--cyan)">200 MW</strong></label>
+            <input type="range" min="100" max="400" value="200" oninput="document.getElementById('thresh-val').textContent=this.value+' MW'">
+          </div>
+          <div class="range-group">
+            <label>Min SoC Reserve: <strong id="soc-res-val" style="color:var(--green)">20%</strong></label>
+            <input type="range" min="5" max="50" value="20" oninput="document.getElementById('soc-res-val').textContent=this.value+'%'">
+          </div>
+          <div class="range-group">
+            <label>Max Charge Rate: <strong id="charge-rate-val" style="color:var(--amber)">80 MW</strong></label>
+            <input type="range" min="10" max="200" value="80" oninput="document.getElementById('charge-rate-val').textContent=this.value+' MW'">
+          </div>
+          <div class="range-group">
+            <label>Grid Support Level: <strong id="support-val" style="color:var(--purple)">50 MW</strong></label>
+            <input type="range" min="0" max="200" value="50" oninput="document.getElementById('support-val').textContent=this.value+' MW'">
+          </div>
         </div>
       </div>
     </div>
 
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title"><span class="panel-icon">⚠️</span> Load Shedding</div>
+        <div class="panel-title"><span class="panel-icon">🔧</span> Feature Toggles</div>
       </div>
       <div class="panel-body">
-        <div class="range-group">
-          <label>Threshold (%)</label>
-          <input type="range" id="shed-threshold" min="50" max="95" value="85" onchange="updateShedThreshold(this.value)">
-          <div style="text-align: center; font-size: 12px; color: var(--cyan);" id="shed-value">85%</div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" checked onchange="toggleFeature('peak-shaving',this)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            <span>Peak Shaving</span>
+            <span style="margin-left:auto;font-size:12px;color:var(--green)" id="t-peak-shaving">Active</span>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            <span>ML Load Forecasting</span>
+            <span style="margin-left:auto;font-size:12px;color:var(--green)">Active</span>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            <span>Renewable Priority</span>
+            <span style="margin-left:auto;font-size:12px;color:var(--green)">Active</span>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            <span>Demand Response</span>
+            <span style="margin-left:auto;font-size:12px;color:var(--green)">Active</span>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            <span>Grid Export Mode</span>
+            <span style="margin-left:auto;font-size:12px;color:var(--text2)">Inactive</span>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            <span>Auto-Rebalancing</span>
+            <span style="margin-left:auto;font-size:12px;color:var(--green)">Active</span>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            <span>System Monitoring</span>
+            <span style="margin-left:auto;font-size:12px;color:var(--green)">Active</span>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="panel">
-    <div class="panel-header">
-      <div class="panel-title"><span class="panel-icon">📅</span> Scheduled Events</div>
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-icon">📊</span> Peak Shaving Performance</div>
+      </div>
+      <div class="panel-body" style="padding:14px">
+        <canvas id="peakChart" height="200"></canvas>
+      </div>
     </div>
-    <div class="panel-body">
-      <table>
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Event</th>
-            <th>Zone</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="schedule-tbody">
-          <tr>
-            <td><strong>14:00</strong></td>
-            <td>Peak Expected</td>
-            <td>Residential</td>
-            <td><span class="panel-badge badge-amber">Prepare</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-header">
-      <div class="panel-title"><span class="panel-icon">🚨</span> Alerts & Notifications</div>
-    </div>
-    <div class="panel-body">
-      <div class="alert-list" id="alerts-list">
-        <div class="alert-item info">
-          <div class="alert-icon">ℹ️</div>
-          <div class="alert-text">
-            <div>Grid operating normally</div>
-            <div class="alert-time">Now</div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="panel-icon">⚙️</span> Grid Parameters</div>
+      </div>
+      <div class="panel-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="background:var(--bg3);border:1px solid var(--border);padding:12px;border-radius:8px">
+            <div style="font-size:11px;color:var(--text2)">DEMAND</div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;color:var(--cyan)" id="ctrl-demand">-- MW</div>
+            <div style="font-size:11px;color:var(--text2)">Current load</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);padding:12px;border-radius:8px">
+            <div style="font-size:11px;color:var(--text2)">SUPPLIED</div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;color:var(--green)" id="ctrl-supplied">-- MW</div>
+            <div style="font-size:11px;color:var(--text2)">Delivered power</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);padding:12px;border-radius:8px">
+            <div style="font-size:11px;color:var(--text2)">BATTERY DELTA</div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;color:var(--purple)" id="ctrl-delta">-- MW</div>
+            <div style="font-size:11px;color:var(--text2)">Charging/Discharging</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);padding:12px;border-radius:8px">
+            <div style="font-size:11px;color:var(--text2)">STATUS</div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:var(--green)" id="ctrl-status">NORMAL</div>
+            <div style="font-size:11px;color:var(--text2)">System state</div>
           </div>
         </div>
       </div>
@@ -934,12 +1128,11 @@
   </div>
 </div>
 
-<!-- PAGE 6: SIMULATION MODEL (WITH 3D VISUALIZATION) -->
+<!-- ═══════════════════════════════════════════
+     PAGE: SIMULATION MODEL (3D VISUALIZATION)
+═══════════════════════════════════════════ -->
 <div class="page" id="page-simulation">
-  <div id="canvas-container" style="position: absolute; top: 60px; left: 0; width: 100%; height: calc(100vh - 60px);"></div>
-
-  <!-- 3D Floating Labels -->
-  <div id="labels-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+  <div id="canvas-container"></div>
 
   <!-- 3D UI Overlay -->
   <div id="ui-layer">
@@ -956,8 +1149,8 @@
       <h3>📊 Grid Status</h3>
       <div style="padding: 16px;">
         <div class="meter-row">
-          <span>Battery (<span id="batt-val">50</span> MWh)</span>
-          <div class="meter-bg"><div class="meter-fill" id="batt-meter" style="width: 25%"></div></div>
+          <span>Battery (<span id="batt-val">100</span> MWh)</span>
+          <div class="meter-bg"><div class="meter-fill" id="batt-meter" style="width: 50%"></div></div>
         </div>
         <div class="meter-row">
           <span>Demand (<span id="demand-val">0</span> / 350)</span>
@@ -969,25 +1162,26 @@
     <div class="panel">
       <h3>⏰ Zone Status</h3>
       <div style="padding: 16px; font-size: 12px; line-height: 1.8;">
-        <div>🏥 <span id="act-hospital">ON</span></div>
-        <div>🏫 <span id="act-school">Closed</span></div>
-        <div>🏭 <span id="act-industry">Idle</span></div>
-        <div>🏘️ <span id="act-residential">Sleeping</span></div>
+        <div>🏥 <span id="act-hospital">Status</span></div>
+        <div>🏫 <span id="act-school">Status</span></div>
+        <div>🏭 <span id="act-industry">Status</span></div>
+        <div>🏘️ <span id="act-residential">Status</span></div>
+        <div>🔋 <span id="act-battery">Status</span></div>
       </div>
     </div>
 
     <div class="panel">
       <h3>📋 Action Log</h3>
       <div style="padding: 16px;">
-        <ul id="action-log" style="font-size: 11px; line-height: 1.6; color: var(--text2); list-style: none;">
-          <li>Ready...</li>
+        <ul id="action-log" style="font-size: 11px; line-height: 1.6; color: var(--text2); list-style: none; max-height:150px; overflow-y:auto">
+          <li>System initialized...</li>
         </ul>
       </div>
     </div>
   </div>
 </div>
 
-</div>
+</div><!-- main-wrap -->
 
 <!-- MODAL for Zone Details -->
 <div class="modal-overlay" id="zone-modal">
