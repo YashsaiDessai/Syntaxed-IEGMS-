@@ -30,6 +30,7 @@ def optimize_grid(actual_loads: dict, predicted_loads: dict, battery_energy: flo
 
     supplied = {entity: 0.0 for entity in PRIORITY}
     battery_delta = 0.0
+    deficit = 0.0
     actions = []
 
     # 1. Provide power exactly according to demand (optimistic baseline)
