@@ -1,4 +1,4 @@
-# ⚡ Syntaxed-IEGMS (Intelligent Energy Grid Management System)
+# Syntaxed-IEGMS (Intelligent Energy Grid Management System)
 
 > **Quantexera Hackathon 2026** · Real-time grid monitoring + ML prediction + optimization dashboard + **AI Agent**
 
@@ -11,7 +11,7 @@
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 ┌─────────────────────┐     MQTT (broker.hivemq.com)      ┌─────────────────────┐
@@ -32,7 +32,7 @@
                                                            └─────────────────────┘
 ```
 
-## 📁 Folder Structure
+## Folder Structure
 
 ```
 project-root/
@@ -57,7 +57,7 @@ project-root/
 
 ---
 
-## 🚀 How to Run
+## How to Run
 
 ### 1. Install Python Dependencies
 
@@ -97,7 +97,7 @@ The dashboard auto-refreshes every 2 seconds.
 
 ---
 
-## 🤖 AI Agent (Optional)
+##AI Agent (Optional)
 
 An **Ollama + LangChain-powered AI agent** is included for intelligent grid management decisions.
 
@@ -111,7 +111,7 @@ pip install langchain langchain-community ollama
 2. Run Ollama on a machine (locally or remote):
 ```bash
 ollama serve
-ollama pull mistral
+ollama pull gemma3:1b
 ```
 
 3. Configure the endpoint:
@@ -144,7 +144,7 @@ OLLAMA_MODEL=mistral
 
 ---
 
-## ⚡ Optimization Logic
+## Optimization Logic
 
 | Condition                     | Status          | Action                                  |
 |-------------------------------|------------------|-----------------------------------------|
@@ -156,7 +156,7 @@ OLLAMA_MODEL=mistral
 
 ---
 
-## 🎯 Demo Script (For Judges)
+## Demo Script (For Judges)
 
 1. **Open the 3D dashboard** — live voxel city with real-time telemetry
 2. **Drag the Time Slider** — watch buildings light up/dim as day turns to night
