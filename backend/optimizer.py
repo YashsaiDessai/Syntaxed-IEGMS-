@@ -9,12 +9,11 @@ Time-aware load management:
 """
 
 # Grid constraints (MW)
-MAX_GRID_CAPACITY = 900.0
 BATTERY_MAX_CHARGE = 400.0
 BATTERY_MAX_RATE = 100.0   # Max charge/discharge per cycle
 PEAK_BATTERY_BOOST_MW = 80.0  # Proactive discharge during peaks
 
-PRIORITY = ["hospital", "school", "industry", "residential"]
+PRIORITY = ["hospital", "industry", "school", "residential"]
 
 # ── Time-Aware Schedule Policy ────────────────────────────────────────────────
 
@@ -172,7 +171,7 @@ def redistribute_freed_power(capped_demand: dict, freed_mw: float, hour: float) 
 # ── Main Optimizer ────────────────────────────────────────────────────────────
 
 def optimize_grid(actual_loads: dict, predicted_loads: dict,
-                  battery_energy: float, hour: float = 12.0) -> dict:
+                  battery_energy: float, hour: float = 12.0, plants: dict = None, manual_loads: dict = None) -> dict:
     """
     Time-aware grid optimizer. Steps:
       1. Apply time-based demand caps (school closed, industry off-shift, etc.)
@@ -223,10 +222,20 @@ def optimize_grid(actual_loads: dict, predicted_loads: dict,
             )
 
     # --- Step 4: Standard surplus/deficit balancing ---
+    # Setup dynamic MAX_GRID_CAPACITY based on active plants
+    if plants is None:
+        plants = {"plant1": {"active": True, "capacity": 300.0}, "plant2": {"active": True, "capacity": 300.0}}
+        
+    dynamic_max_capacity = sum(p["capacity"] for p in plants.values() if p["active"])
+    if dynamic_max_capacity == 0:
+        actions.insert(0, "🚨 ALL Grid Generation OFFLINE 🚨")
+    elif dynamic_max_capacity < 600.0:
+        actions.insert(0, f"Grid capacity reduced to {dynamic_max_capacity} MW.")
+
     current_total = sum(supplied.values())
 
-    if current_total <= MAX_GRID_CAPACITY:
-        excess = MAX_GRID_CAPACITY - current_total
+    if current_total <= dynamic_max_capacity:
+        excess = dynamic_max_capacity - current_total
         to_charge = min(excess, BATTERY_MAX_RATE, BATTERY_MAX_CHARGE - battery_energy)
         if battery_delta == 0 and to_charge > 1.0:
             battery_delta = to_charge
@@ -234,7 +243,7 @@ def optimize_grid(actual_loads: dict, predicted_loads: dict,
         elif battery_delta == 0:
             actions.append("Grid stable. Battery full.")
     else:
-        deficit = current_total - MAX_GRID_CAPACITY
+        deficit = current_total - dynamic_max_capacity
 
         # Try battery discharge first (if not already in peak boost)
         if battery_delta >= 0:
@@ -276,6 +285,19 @@ def optimize_grid(actual_loads: dict, predicted_loads: dict,
 
     new_battery = min(BATTERY_MAX_CHARGE, max(0.0, battery_energy + battery_delta))
 
+    # Calculate generation split per plant based on total supplied from grid
+    # Grid supply = total supplied - battery discharge
+    grid_supply = current_total
+    if battery_delta < 0:
+        grid_supply = current_total + battery_delta  # + because delta is negative
+        
+    generation = {"plant1": 0.0, "plant2": 0.0}
+    active_plants = [pid for pid, p in plants.items() if p["active"]]
+    if active_plants:
+        split = grid_supply / len(active_plants)
+        for pid in active_plants:
+            generation[pid] = round(split, 2)
+
     return {
         "status_code": status_code,
         "actions": actions,
@@ -285,6 +307,7 @@ def optimize_grid(actual_loads: dict, predicted_loads: dict,
         "total_supplied": round(sum(supplied.values()), 2),
         "battery_energy": round(new_battery, 2),
         "battery_delta": round(battery_delta, 2),
+        "generation": generation,
         "peak_boost_active": peak_boost_active,
         "freed_mw": round(freed_mw, 2),
         "schedule_status": get_entity_schedule_status(hour),

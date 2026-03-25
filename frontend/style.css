@@ -3,14 +3,14 @@
    Fonts: Inter (body/UI) + JetBrains Mono (code/values)
 ════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
   margin: 0;
   background-color: #050d1a;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Outfit', sans-serif;
   color: #c8e6f5;
   min-height: 100vh;
   overflow-x: hidden;
@@ -42,22 +42,30 @@ body {
 /* ─── Map Labels (Google Maps style, hover reveals details) ─── */
 .map-label {
   position: absolute;
-  background: rgba(5, 13, 26, 0.88);
-  border: 1px solid rgba(0, 212, 255, 0.3);
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 600;
+  background: rgba(10, 18, 38, 0.75);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+  border-top: 1px solid rgba(0, 212, 255, 0.4);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
   color: #fff;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Outfit', sans-serif;
   transform: translate(-50%, -50%);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  backdrop-filter: blur(4px);
-  transition: opacity 0.2s;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: auto;
   cursor: help;
 }
-.map-label .label-title   { display: block; }
+.map-label:hover {
+  transform: translate(-50%, -50%) scale(1.05);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  box-shadow: 0 12px 32px rgba(0,212,255,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
+  background: rgba(13, 24, 50, 0.85);
+}
+.map-label .label-title   { display: block; letter-spacing: 0.02em; }
 .map-label .label-details {
   display: none; margin-top: 4px; font-weight: 500;
   font-size: 0.7rem; line-height: 1.4; color: #94a3b8;

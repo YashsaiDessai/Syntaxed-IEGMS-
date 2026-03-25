@@ -378,25 +378,25 @@ addLabel('label-school', 25, 12, 20);
 
 // 5. BATTERY SUBSTATION (Near Power Plants & Industrial Zone)
 const battMesh = new THREE.Mesh(new THREE.BoxGeometry(8, 8, 8), matBatt);
-battMesh.position.set(-30, 4, 30);
+battMesh.position.set(-50, 4, 50);
 battMesh.castShadow = true; battMesh.receiveShadow = true;
 attachWindows(battMesh, 8, 8, 8, matWinBatt, "battery");
 scene.add(battMesh);
-addLabel('label-battery', -30, 14, 30);
+addLabel('label-battery', -50, 14, 50);
 
 // 6. POWER PLANTS (Generation)
 const plantMat = new THREE.MeshStandardMaterial({ color: 0x64748b });
 const pp1 = new THREE.Mesh(new THREE.CylinderGeometry(3, 5, 12), plantMat);
-pp1.position.set(-35, 6, 35);
+pp1.position.set(-55, 6, 65);
 pp1.castShadow = true; pp1.receiveShadow = true;
 scene.add(pp1);
-addLabel('label-plant1', -35, 15, 35);
+addLabel('label-plant1', -55, 15, 65);
 
 const pp2 = new THREE.Mesh(new THREE.CylinderGeometry(3, 5, 12), plantMat);
-pp2.position.set(-25, 6, 42);
+pp2.position.set(-40, 6, 70);
 pp2.castShadow = true; pp2.receiveShadow = true;
 scene.add(pp2);
-addLabel('label-plant2', -25, 15, 42);
+addLabel('label-plant2', -40, 15, 70);
 
 // 7. GRID LINES & TRANSMISSION NETWORK (Neat paths)
 function drawTransmissionLine(startV, endV, colorHex) {
@@ -696,6 +696,13 @@ function updateWindowLighting(zoneId, state) {
     const d = state.demand ? state.demand[zoneId] : 0;
     const s = state.supplied ? state.supplied[zoneId] : 0;
     
+    // If absolute power supplied is very low (e.g. building in night sleep mode or blackout)
+    if (s < 20) {
+        mat.emissive.setHex(0x000000);
+        mat.emissiveIntensity = 0;
+        return;
+    }
+    
     if (d > 0 && s < d) {
         // Shedding power! Dim or turn red.
         const pct = s / d;
@@ -820,7 +827,47 @@ async function fetchState() {
         }
         
         elDemand.textContent = state.total_demand.toFixed(1);
-        elDemandMeter.style.width = `${Math.min(100, (state.total_demand / 900) * 100)}%`;
+        
+        let maxCap = 600;
+        if (state.generation) {
+            maxCap = (document.getElementById('toggle-plant1').checked ? 300 : 0) + (document.getElementById('toggle-plant2').checked ? 300 : 0);
+        }
+        const elMaxDemand = document.getElementById("max-demand-val");
+        if (elMaxDemand) elMaxDemand.textContent = maxCap;
+        
+        elDemandMeter.style.width = `${Math.min(100, (state.total_demand / Math.max(1, maxCap)) * 100)}%`;
+
+        const updateZonePanel = (zone, key) => {
+            const dem = state.demand[zone] || 0;
+            const sup = state.supplied[zone] || 0;
+            const elDem = document.getElementById(`pan-${key}-dem`);
+            const elSup = document.getElementById(`pan-${key}-sup`);
+            const elBar = document.getElementById(`pan-${key}-bar`);
+            
+            if (elDem) elDem.textContent = dem.toFixed(0);
+            if (elSup) elSup.textContent = sup.toFixed(0);
+            if (elBar) {
+                const pct = dem > 0 ? (sup / dem) * 100 : 0;
+                elBar.style.width = `${Math.min(100, pct)}%`;
+                if (pct >= 99) elBar.style.background = "#22c55e"; // green
+                else if (pct >= 30) elBar.style.background = "#f59e0b"; // yellow
+                else elBar.style.background = "#ef4444"; // red
+            }
+        };
+
+        updateZonePanel("hospital", "hosp");
+        updateZonePanel("industry", "ind");
+        updateZonePanel("school", "sch");
+        updateZonePanel("residential", "res");
+
+        const elSupply = document.getElementById("supply-val");
+        const elSupplyMeter = document.getElementById("supply-meter");
+        const elMaxSupply = document.getElementById("max-supply-val");
+        if (elSupply) {
+            elSupply.textContent = state.total_supplied.toFixed(1);
+            if (elMaxSupply) elMaxSupply.textContent = maxCap;
+            if (elSupplyMeter) elSupplyMeter.style.width = `${Math.min(100, (state.total_supplied / Math.max(1, maxCap)) * 100)}%`;
+        }
 
         updateHoverDetails(state);
 
@@ -829,9 +876,11 @@ async function fetchState() {
         
         // Update Energy Paths based on supply/demand
         energyPaths.forEach((path, idx) => {
-            // Plant to battery paths (indices 0-1) are active if battery has supply
-            if (idx < 2) {
-                path.isActive = state.battery_delta > 0;
+            // Plant to battery paths (indices 0-1)
+            if (idx === 0) {
+                path.isActive = state.battery_delta > 0 && document.getElementById('toggle-plant1').checked;
+            } else if (idx === 1) {
+                path.isActive = state.battery_delta > 0 && document.getElementById('toggle-plant2').checked;
             } else {
                 // Battery to zone paths (indices 2+) are active if zone has supply
                 const zoneNames = ["hospital", "school", "industry", "residential"];
@@ -851,6 +900,34 @@ async function fetchState() {
 
     } catch (e) {
         console.warn("Backend poll failed", e);
+    }
+}
+
+async function togglePlant(plantId, isActive) {
+    try {
+        await fetch(`${API}/api/plant/toggle`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ plant_id: plantId, active: isActive })
+        });
+        // Immediately fetch updated state
+        fetchState();
+    } catch (e) {
+        console.error("Failed to toggle plant", e);
+    }
+}
+
+async function setManualLoad(zoneId, amount) {
+    try {
+        await fetch(`${API}/api/load/override`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ zone: zoneId, mw: parseFloat(amount) })
+        });
+        // Immediately fetch updated state to show the spike
+        fetchState();
+    } catch (e) {
+        console.error(`Failed to override load for ${zoneId}`, e);
     }
 }
 

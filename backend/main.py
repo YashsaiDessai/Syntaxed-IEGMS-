@@ -46,9 +46,19 @@ class AppState:
     battery_energy = 50.0         # Start with 50 MW in battery
     latest_opt = {}               # Cache of the last optimization result
     grid_agent = None             # AI Agent instance (optional)
-    ollama_config = {
+    ollama_config = {             # Ollama configuration
         "endpoint": os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434"),
         "model": os.getenv("OLLAMA_MODEL", "gemma3:1b")
+    }
+    plants = {                    # Power Plants Tracking
+        "plant1": {"active": True, "capacity": 300.0},
+        "plant2": {"active": True, "capacity": 300.0}
+    }
+    manual_loads = {              # User Manual Demand Overrides
+        "hospital": 0.0,
+        "school": 0.0,
+        "industry": 0.0,
+        "residential": 0.0
     }
 
 
@@ -71,7 +81,10 @@ async def simulation_loop():
         
         # Only run optimizer if we have actual data from the simulator
         if actuals:
-            result = optimize_grid(actuals, predicted, AppState.battery_energy, AppState.simulated_hour)
+            result = optimize_grid(
+                actuals, predicted, AppState.battery_energy, AppState.simulated_hour,
+                plants=AppState.plants, manual_loads=AppState.manual_loads
+            )
             AppState.battery_energy = result["battery_energy"]
             result["predicted_loads"] = predicted
             AppState.latest_opt = result
@@ -120,6 +133,31 @@ def set_time(req: TimeRequest):
     if isinstance(AppState.latest_opt, dict):
         AppState.latest_opt["simulated_hour"] = val
     return {"status": "success", "simulated_hour": val}
+
+
+class PlantToggleRequest(BaseModel):
+    plant_id: str
+    active: bool
+
+@app.post("/api/plant/toggle")
+def toggle_plant(req: PlantToggleRequest):
+    """Allow the frontend to easily stop or start a power plant."""
+    if req.plant_id in AppState.plants:
+        AppState.plants[req.plant_id]["active"] = req.active
+        return {"status": "success", "state": AppState.plants}
+    return {"status": "error", "message": "Unknown plant ID"}
+
+class ManualLoadRequest(BaseModel):
+    zone: str
+    mw: float
+
+@app.post("/api/load/override")
+def override_load(req: ManualLoadRequest):
+    """Allow frontend to override demand for severe stress tests."""
+    if req.zone in AppState.manual_loads:
+        AppState.manual_loads[req.zone] = req.mw
+        return {"status": "success", "manual_loads": AppState.manual_loads}
+    return {"status": "error", "message": "Unknown zone ID"}
 
 
 # ── AI Agent Endpoints (Optional) ────────────────────────────────────────────

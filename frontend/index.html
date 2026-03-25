@@ -236,10 +236,12 @@
     .ctrl-btn.amber { border-color:rgba(255,184,0,0.4); color:var(--amber); background:rgba(255,184,0,0.06); }
 
     .range-group { display:flex; flex-direction:column; gap:6px; }
-    .range-group label { font-size:12px; color:var(--text2); letter-spacing:1px; }
-    input[type=range] { -webkit-appearance:none; width:180px; height:5px; background:rgba(0,212,255,0.15); border-radius:3px; outline:none; }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--cyan); cursor:pointer; box-shadow:0 0 8px var(--cyan); }
-    select { background:var(--bg3); border:1px solid var(--border2); color:var(--text); padding:7px 12px; border-radius:8px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer; outline:none; }
+    .range-group label { font-size:12px; color:var(--text2); letter-spacing:1px; font-family:'Outfit', sans-serif;}
+    input[type=range] { -webkit-appearance:none; width:100%; height:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); border-radius:4px; outline:none; transition: background 0.3s; }
+    input[type=range]:hover { background:rgba(255,255,255,0.1); }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--cyan); cursor:pointer; box-shadow:0 0 12px var(--cyan); border: 2px solid #fff; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+    select { background:var(--bg3); border:1px solid var(--border2); color:var(--text); padding:7px 12px; border-radius:8px; font-family:'Outfit',sans-serif; font-size:13px; cursor:pointer; outline:none; }
 
     /* ─── Toggles ─── */
     .toggle-row { display:flex; align-items:center; gap:10px; font-size:13px; }
@@ -289,39 +291,56 @@
     #ui-layer {
       position:absolute; top:0; left:0; width:100%; height:100%;
       pointer-events:none; z-index:10; padding:24px;
-      display:flex; flex-direction:column; align-items:flex-start; gap:16px;
     }
-    #ui-layer > * { pointer-events:auto; }
+    
+    .ui-sidebar {
+      pointer-events: auto;
+      max-height: 100%;
+      overflow-y: auto;
+      padding-right: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .ui-sidebar::-webkit-scrollbar { width: 4px; }
+    .ui-sidebar::-webkit-scrollbar-thumb { background:rgba(0,212,255,0.4); border-radius:4px; }
 
     /* Sim header */
     #ui-layer header h1 {
-      font-size:1.6rem; font-weight:700;
-      background: linear-gradient(90deg, #fff 0%, #3b82f6 100%);
+      font-size:1.7rem; font-weight:700;
+      background: linear-gradient(120deg, #ffffff 0%, #a5b4fc 100%);
       -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-      font-family:'Inter',sans-serif;
+      font-family:'Outfit',sans-serif;
+      letter-spacing: -0.02em;
     }
-    #ui-layer header p { font-size:0.85rem; color:#94a3b8; font-family:'JetBrains Mono',monospace; }
+    #ui-layer header p { font-size:0.85rem; color:#94a3b8; font-family:'JetBrains Mono',monospace; opacity: 0.85; }
 
     /* Sim panels (distinct from DERMS panels — use sim-panel) */
     .sim-panel {
-      background: rgba(15,23,42,0.82);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px; padding: 18px;
-      width: 300px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      background: linear-gradient(145deg, rgba(16, 25, 45, 0.75), rgba(8, 14, 28, 0.9));
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-top: 1px solid rgba(0, 212, 255, 0.4);
+      border-radius: 16px; padding: 22px;
+      width: 340px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
     }
-    .sim-panel h3 { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; margin-bottom:10px; font-family:'Inter',sans-serif; }
+    .sim-panel:hover {
+      box-shadow: 0 20px 45px rgba(0,0,0,0.8), 0 0 30px rgba(0,212,255,0.15), inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+    .sim-panel h3 { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; color:#94a3b8; margin-bottom:12px; font-family:'Outfit',sans-serif; font-weight:600; }
 
     /* Clock widget */
     .sim-clock { font-size:2.2rem; font-family:'JetBrains Mono',monospace; font-weight:700; color:#3b82f6; margin-bottom:8px; }
-    .sim-subtext { font-size:0.72rem; color:#64748b; margin-top:4px; font-family:'Inter',sans-serif; }
+    .sim-subtext { font-size:0.75rem; color:#64748b; margin-top:4px; font-family:'Outfit',sans-serif; font-weight:400; }
 
     /* Sim meters */
-    .meter-row { font-size:0.78rem; color:#e2e8f0; }
-    .mt-2 { margin-top:10px; }
-    .meter-bg { width:100%; height:7px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden; margin-top:5px; }
-    .meter-fill { height:100%; background:#3b82f6; transition:width 0.3s ease, background 0.3s ease; }
+    .meter-row { font-size:0.8rem; color:#e2e8f0; font-family:'Outfit',sans-serif; font-weight:400; }
+    .mt-2 { margin-top:12px; }
+    .meter-bg { width:100%; height:8px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05); border-radius:6px; overflow:hidden; margin-top:6px; box-shadow:inset 0 1px 3px rgba(0,0,0,0.5); }
+    .meter-fill { height:100%; transition:width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s ease; box-shadow: 0 0 8px rgba(255,255,255,0.2); }
 
     /* Status badges in sim */
     .status-normal   { color:#22c55e; }
@@ -653,7 +672,7 @@
       <div class="map-label" id="label-school" data-zone="school">
         <span class="label-title">🏫 Educational Inst.</span>
         <span class="label-details">
-          <span class="label-line">Priority: High</span>
+          <span class="label-line">Priority: Medium</span>
           <span class="label-line">Demand: <span id="info-school-demand">--</span> MW</span>
           <span class="label-line">Supplied: <span id="info-school-supplied">--</span> MW</span>
           <span class="label-line">Usage: <span id="info-school-usage">--</span>%</span>
@@ -662,7 +681,7 @@
       <div class="map-label" id="label-industry" data-zone="industry">
         <span class="label-title">🏭 Industrial Zone</span>
         <span class="label-details">
-          <span class="label-line">Priority: Medium</span>
+          <span class="label-line">Priority: High</span>
           <span class="label-line">Demand: <span id="info-industry-demand">--</span> MW</span>
           <span class="label-line">Supplied: <span id="info-industry-supplied">--</span> MW</span>
           <span class="label-line">Usage: <span id="info-industry-usage">--</span>%</span>
@@ -688,14 +707,14 @@
       <div class="map-label" id="label-plant1" data-zone="plant1">
         <span class="label-title">⚡ Power Plant 1</span>
         <span class="label-details">
-          <span class="label-line">Capacity: 450 MW</span>
+          <span class="label-line">Capacity: 300 MW</span>
           <span class="label-line">Output: <span id="info-plant1-output">--</span> MW</span>
         </span>
       </div>
       <div class="map-label" id="label-plant2" data-zone="plant2">
         <span class="label-title">⚡ Power Plant 2</span>
         <span class="label-details">
-          <span class="label-line">Capacity: 450 MW</span>
+          <span class="label-line">Capacity: 300 MW</span>
           <span class="label-line">Output: <span id="info-plant2-output">--</span> MW</span>
         </span>
       </div>
@@ -703,33 +722,92 @@
 
     <!-- UI Overlay Panels -->
     <div id="ui-layer">
-      <header>
-        <h1>⚡ AI Grid Orchestrator</h1>
-        <p>Multi-Entity Priority Shedding &amp; Battery Sim</p>
-      </header>
+      <div class="ui-sidebar">
+        <header>
+          <h1>⚡ AI Grid Orchestrator</h1>
+          <p>Multi-Entity Priority Shedding &amp; Battery Sim</p>
+        </header>
 
-      <div class="sim-panel">
-        <h3>Global Time Simulation (24m = 24h)</h3>
-        <div class="sim-clock" id="clock-display">06:00</div>
-        <input type="range" id="time-slider" min="0" max="23.9" step="0.1" value="6">
-        <p class="sim-subtext">Drag to time-travel</p>
-      </div>
-
-      <div class="sim-panel">
-        <h3>Grid Status: <span id="grid-status" class="status-normal">STABLE</span></h3>
-        <div class="meter-row">
-          <span>Energy Reserve (<span id="batt-val">50</span> MW):</span>
-          <div class="meter-bg"><div class="meter-fill" id="batt-meter" style="width:25%"></div></div>
+        <div class="sim-panel">
+          <h3>Global Time Simulation (24m = 24h)</h3>
+          <div class="sim-clock" id="clock-display">06:00</div>
+          <input type="range" id="time-slider" min="0" max="23.9" step="0.1" value="6">
+          <p class="sim-subtext">Drag to time-travel</p>
         </div>
-        <div class="meter-row mt-2">
-          <span>Current Demand (<span id="demand-val">0</span> / 900 MW max):</span>
-          <div class="meter-bg"><div class="meter-fill" id="demand-meter" style="width:0%;background:#ef4444"></div></div>
-        </div>
-      </div>
 
-      <div class="sim-panel sim-log">
-        <h3>Orchestrator Action Log</h3>
-        <ul id="action-log"><li>Waiting for orchestrator...</li></ul>
+        <div class="sim-panel">
+          <h3>Grid Status: <span id="grid-status" class="status-normal">STABLE</span></h3>
+          <div class="meter-row">
+            <span>Energy Reserve (<span id="batt-val">50</span> MW):</span>
+            <div class="meter-bg"><div class="meter-fill" id="batt-meter" style="width:25%"></div></div>
+          </div>
+          <div class="meter-row mt-2">
+            <span>Current Demand (<span id="demand-val">0</span> / <span id="max-demand-val">600</span> MW max):</span>
+            <div class="meter-bg"><div class="meter-fill" id="demand-meter" style="width:0%;background:#ef4444"></div></div>
+          </div>
+          <div class="meter-row mt-2">
+            <span>Current Supply (<span id="supply-val">0</span> / <span id="max-supply-val">600</span> MW max):</span>
+            <div class="meter-bg"><div class="meter-fill" id="supply-meter" style="width:0%;background:#22c55e"></div></div>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Area Diagnostics</h3>
+          <div class="meter-row mt-2">
+            <span style="display:flex; justify-content:space-between"><span>🏥 Hospital</span> <span><span id="pan-hosp-sup">0</span> / <span id="pan-hosp-dem">0</span> MW</span></span>
+            <div class="meter-bg"><div class="meter-fill" id="pan-hosp-bar" style="width:0%;background:#22c55e"></div></div>
+          </div>
+          <div class="meter-row mt-2">
+            <span style="display:flex; justify-content:space-between"><span>🏭 Industry</span> <span><span id="pan-ind-sup">0</span> / <span id="pan-ind-dem">0</span> MW</span></span>
+            <div class="meter-bg"><div class="meter-fill" id="pan-ind-bar" style="width:0%;background:#22c55e"></div></div>
+          </div>
+          <div class="meter-row mt-2">
+            <span style="display:flex; justify-content:space-between"><span>🏫 School</span> <span><span id="pan-sch-sup">0</span> / <span id="pan-sch-dem">0</span> MW</span></span>
+            <div class="meter-bg"><div class="meter-fill" id="pan-sch-bar" style="width:0%;background:#22c55e"></div></div>
+          </div>
+          <div class="meter-row mt-2">
+            <span style="display:flex; justify-content:space-between"><span>🏘️ Residential</span> <span><span id="pan-res-sup">0</span> / <span id="pan-res-dem">0</span> MW</span></span>
+            <div class="meter-bg"><div class="meter-fill" id="pan-res-bar" style="width:0%;background:#22c55e"></div></div>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Power Generation Sources</h3>
+          <div class="toggle-row mt-2" style="margin-top:10px; margin-bottom:8px;">
+            <label class="toggle"><input type="checkbox" id="toggle-plant1" checked onchange="togglePlant('plant1', this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            <span style="color:#e2e8f0; font-family:'JetBrains Mono',monospace; font-size:12px;">Plant 1 (300 MW)</span>
+          </div>
+          <div class="toggle-row">
+            <label class="toggle"><input type="checkbox" id="toggle-plant2" checked onchange="togglePlant('plant2', this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+            <span style="color:#e2e8f0; font-family:'JetBrains Mono',monospace; font-size:12px;">Plant 2 (300 MW)</span>
+          </div>
+        </div>
+
+        <div class="sim-panel">
+          <h3>Manual Load Spikes</h3>
+          <p class="sim-subtext" style="margin-bottom:12px">Inject demand to safely test brownouts</p>
+          <div class="range-group">
+            <label>🏥 Hospital: <span id="lbl-load-hospital" style="color:#fff">0</span> MW</label>
+            <input type="range" id="load-hospital" min="0" max="500" step="10" value="0" oninput="document.getElementById('lbl-load-hospital').innerText=this.value" onchange="setManualLoad('hospital', this.value)">
+          </div>
+          <div class="range-group mt-2">
+            <label>🏫 School: <span id="lbl-load-school" style="color:#fff">0</span> MW</label>
+            <input type="range" id="load-school" min="0" max="500" step="10" value="0" oninput="document.getElementById('lbl-load-school').innerText=this.value" onchange="setManualLoad('school', this.value)">
+          </div>
+          <div class="range-group mt-2">
+            <label>🏭 Industry: <span id="lbl-load-industry" style="color:#fff">0</span> MW</label>
+            <input type="range" id="load-industry" min="0" max="500" step="10" value="0" oninput="document.getElementById('lbl-load-industry').innerText=this.value" onchange="setManualLoad('industry', this.value)">
+          </div>
+          <div class="range-group mt-2">
+            <label>🏘️ Residential: <span id="lbl-load-residential" style="color:#fff">0</span> MW</label>
+            <input type="range" id="load-residential" min="0" max="500" step="10" value="0" oninput="document.getElementById('lbl-load-residential').innerText=this.value" onchange="setManualLoad('residential', this.value)">
+          </div>
+        </div>
+
+        <div class="sim-panel sim-log">
+          <h3>Orchestrator Action Log</h3>
+          <ul id="action-log"><li>Waiting for orchestrator...</li></ul>
+        </div>
       </div>
     </div>
 
