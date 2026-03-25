@@ -2,7 +2,8 @@
  * app.js - Advanced Three.js Voxel City Simulation
  */
 
-const API = "http://localhost:8000";
+const API = "";  // Served by FastAPI on the same origin — no hardcoded port needed
+
 
 // ── 3D Scene Setup ──────────────────────────────────────────────────────────
 const scene = new THREE.Scene();
@@ -443,3 +444,121 @@ animate();
 
 setInterval(fetchState, 1000);
 fetchState();
+
+
+// ── AI Chat Panel Logic ──────────────────────────────────────────────────────
+
+const chatToggle   = document.getElementById('ai-chat-toggle');
+const chatPanel    = document.getElementById('ai-chat-panel');
+const chatClose    = document.getElementById('ai-chat-close');
+const chatMessages = document.getElementById('ai-chat-messages');
+const chatInput    = document.getElementById('ai-chat-input');
+const chatSend     = document.getElementById('ai-chat-send');
+const chips        = document.querySelectorAll('.suggestion-chip');
+
+let chatOpen = false;
+
+function toggleChat(open) {
+    chatOpen = open !== undefined ? open : !chatOpen;
+    if (chatOpen) {
+        chatPanel.classList.remove('hidden');
+        chatToggle.classList.add('active');
+        chatInput.focus();
+    } else {
+        chatPanel.classList.add('hidden');
+        chatToggle.classList.remove('active');
+    }
+}
+
+chatToggle.addEventListener('click', () => toggleChat());
+chatClose.addEventListener('click', () => toggleChat(false));
+
+// Close on Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && chatOpen) toggleChat(false);
+});
+
+// Suggestion chips
+chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+        sendMessage(chip.dataset.q);
+    });
+});
+
+// Send on Enter
+chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage(chatInput.value.trim());
+    }
+});
+chatSend.addEventListener('click', () => sendMessage(chatInput.value.trim()));
+
+function appendMessage(text, who) {
+    const wrap = document.createElement('div');
+    wrap.className = `chat-msg ${who}-msg`;
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    bubble.textContent = text;
+    wrap.appendChild(bubble);
+    chatMessages.appendChild(wrap);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return wrap;
+}
+
+function showTyping() {
+    const wrap = document.createElement('div');
+    wrap.className = 'chat-msg ai-msg';
+    wrap.id = 'typing-indicator';
+    wrap.innerHTML = `<div class="typing-bubble"><span></span><span></span><span></span></div>`;
+    chatMessages.appendChild(wrap);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function removeTyping() {
+    const el = document.getElementById('typing-indicator');
+    if (el) el.remove();
+}
+
+async function sendMessage(text) {
+    if (!text) return;
+    chatInput.value = '';
+    chatSend.disabled = true;
+
+    // Show user bubble
+    appendMessage(text, 'user');
+
+    // Show typing indicator
+    showTyping();
+
+    try {
+        const res = await fetch(`${API}/agent/decide`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: text })
+        });
+
+        removeTyping();
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        let reply = '';
+        if (data.status === 'success') {
+            reply = data.decision || '(no response)';
+        } else if (data.status === 'error') {
+            reply = `⚠️ Error: ${data.message || data.error}`;
+        } else {
+            reply = JSON.stringify(data, null, 2);
+        }
+
+        appendMessage(reply, 'ai');
+
+    } catch (err) {
+        removeTyping();
+        appendMessage(`⚠️ Couldn't reach the agent: ${err.message}. Make sure the backend is running on port 8000.`, 'ai');
+    } finally {
+        chatSend.disabled = false;
+        chatInput.focus();
+    }
+}

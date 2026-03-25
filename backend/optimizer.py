@@ -1,85 +1,276 @@
 """
 optimizer.py - V2 AI Orchestrator Logic
 
-Handles real-time priority load shedding and battery management.
-Entities priority: Hospital > School > Industry > Residential.
+Time-aware load management:
+  - Per-entity schedule caps (school off after 17:00, industry overnight, etc.)
+  - Power redistribution from inactive to active high-priority zones
+  - Proactive peak-hour battery boost (morning 08-09, evening 18-21)
+  - Standard priority shedding as last resort
 """
 
 # Grid constraints (MW)
-MAX_GRID_CAPACITY = 900.0  
+MAX_GRID_CAPACITY = 900.0
 BATTERY_MAX_CHARGE = 400.0
-BATTERY_MAX_RATE = 100.0  # Max charge/discharge per iteration
+BATTERY_MAX_RATE = 100.0   # Max charge/discharge per cycle
+PEAK_BATTERY_BOOST_MW = 80.0  # Proactive discharge during peaks
 
 PRIORITY = ["hospital", "school", "industry", "residential"]
 
+# ── Time-Aware Schedule Policy ────────────────────────────────────────────────
 
-def optimize_grid(actual_loads: dict, predicted_loads: dict, battery_energy: float) -> dict:
+# Each entity has a list of (start_hour, end_hour, cap_fraction) windows.
+# Outside the active window, demand is capped at `inactive_cap` fraction.
+ENTITY_SCHEDULES = {
+    "hospital": {
+        "label": "Hospital",
+        "always_on": True,
+        "active_hours": (0, 24),   # 24/7 — never reduce
+        "active_cap": 1.0,
+        "inactive_cap": 1.0,
+        "inactive_reason": "Hospital operates 24/7 — no reduction."
+    },
+    "school": {
+        "label": "School",
+        "always_on": False,
+        "active_hours": (7, 17),   # 07:00–17:00
+        "active_cap": 1.0,
+        "inactive_cap": 0.05,      # 5% standby (security lights, HVAC minimum)
+        "inactive_reason": "School is closed — reduced to 5% standby power."
+    },
+    "industry": {
+        "label": "Industry",
+        "always_on": False,
+        "active_hours": (5, 19),   # 05:00–19:00
+        "active_cap": 1.0,
+        "inactive_cap": 0.10,      # 10% overnight (minimal machinery, security)
+        "inactive_reason": "Industrial zone is off-shift — reduced to 10% standby."
+    },
+    "residential": {
+        "label": "Residential",
+        "always_on": False,
+        "active_hours": (0, 24),   # Always gets power, but priority shifts by time
+        "active_cap": 1.0,
+        "inactive_cap": 0.50,      # 50% off-peak (early morning low demand)
+        "inactive_reason": "Residential off-peak hours — reduced to 50%."
+    }
+}
+
+# Residential gets a "surge" window — treated as active (full cap) during peak
+RESIDENTIAL_PEAK_HOURS = (17, 23)  # 17:00–23:00 evening surge
+
+
+def _is_peak_hour(hour: float) -> bool:
+    """Peak hours: morning rush (08–09) and evening surge (18–21)."""
+    return (8.0 <= hour < 9.0) or (18.0 <= hour < 21.0)
+
+
+def _is_entity_active(entity: str, hour: float) -> tuple[bool, str]:
     """
-    Given the current and predicted loads of the 4 entities, balance the grid
-    by charging/discharging the battery and shedding load by priority.
+    Returns (is_active, reason).
+    Special rule: residential is 'active' during evening surge.
     """
-    # Use the max of actual vs predicted to be safe
-    demand = {}
-    total_demand = 0.0
+    hour = hour % 24.0
+    sched = ENTITY_SCHEDULES[entity]
+
+    if sched["always_on"]:
+        return True, "Always active."
+
+    start, end = sched["active_hours"]
+
+    # Residential special case
+    if entity == "residential":
+        pk_start, pk_end = RESIDENTIAL_PEAK_HOURS
+        if pk_start <= hour < pk_end:
+            return True, "Residential evening peak — full power priority."
+        if start <= hour < end:
+            return True, "Residential daytime — normal operation."
+        return False, sched["inactive_reason"]
+
+    if start <= hour < end:
+        return True, f"{sched['label']} active hours ({start:02.0f}:00–{end:02.0f}:00)."
+    return False, sched["inactive_reason"]
+
+
+def get_entity_schedule_status(hour: float) -> dict:
+    """
+    Returns per-entity schedule status at the given hour.
+    Used by /agent/schedule endpoint and LLM context.
+    """
+    result = {}
+    for entity in PRIORITY:
+        sched = ENTITY_SCHEDULES[entity]
+        active, reason = _is_entity_active(entity, hour)
+        cap = sched["active_cap"] if active else sched["inactive_cap"]
+        result[entity] = {
+            "active": active,
+            "cap_fraction": cap,
+            "cap_pct": int(cap * 100),
+            "reason": reason
+        }
+    return result
+
+
+def apply_time_caps(demand: dict, hour: float) -> tuple[dict, float, list]:
+    """
+    Apply schedule-based caps to demand.
+    Returns (capped_demand, total_freed_mw, notes).
+    """
+    capped = {}
+    total_freed = 0.0
+    notes = []
+
+    for entity in PRIORITY:
+        sched = ENTITY_SCHEDULES[entity]
+        active, reason = _is_entity_active(entity, hour)
+        cap = sched["active_cap"] if active else sched["inactive_cap"]
+        original = demand.get(entity, 0.0)
+        capped_val = original * cap
+        freed = original - capped_val
+        capped[entity] = capped_val
+        if freed > 0.5:
+            total_freed += freed
+            notes.append(
+                f"[TIME] {sched['label']}: capped to {int(cap*100)}% "
+                f"(-{round(freed,1)} MW freed). {reason}"
+            )
+    return capped, total_freed, notes
+
+
+def redistribute_freed_power(capped_demand: dict, freed_mw: float, hour: float) -> tuple[dict, list]:
+    """
+    Redistribute freed MW to highest-priority active entities that want more power.
+    Returns (boosted_demand, redistribution_notes).
+    """
+    boosted = {k: v for k, v in capped_demand.items()}
+    notes = []
+    remaining = freed_mw
+
+    # Redistribute in priority order (hospital first, residential last)
+    for entity in PRIORITY:
+        if remaining < 0.5:
+            break
+        active, _ = _is_entity_active(entity, hour)
+        if not active:
+            continue
+        sched = ENTITY_SCHEDULES[entity]
+        # How much more could this entity use? (up to 20% above its normal demand as a boost)
+        uncapped = capped_demand.get(entity, 0.0)
+        headroom = uncapped * 0.20  # allow up to +20% boost
+        if headroom < 0.5:
+            continue
+        boost = min(headroom, remaining)
+        boosted[entity] += boost
+        remaining -= boost
+        notes.append(
+            f"[REDIR] +{round(boost,1)} MW redistributed to {sched['label']} "
+            f"(active, priority {PRIORITY.index(entity)+1})."
+        )
+
+    return boosted, notes
+
+
+# ── Main Optimizer ────────────────────────────────────────────────────────────
+
+def optimize_grid(actual_loads: dict, predicted_loads: dict,
+                  battery_energy: float, hour: float = 12.0) -> dict:
+    """
+    Time-aware grid optimizer. Steps:
+      1. Apply time-based demand caps (school closed, industry off-shift, etc.)
+      2. Redistribute freed power to active high-priority zones
+      3. Check for peak hours — proactively engage battery boost
+      4. Standard deficit/surplus balancing with priority shedding
+    """
+    # --- Step 0: raw demand (max of actual vs predicted) ---
+    raw_demand = {}
     for entity in PRIORITY:
         act = actual_loads.get(entity, 0.0)
         pred = predicted_loads.get(entity, 0.0)
-        safe_val = max(act, pred)
-        demand[entity] = safe_val
-        total_demand += safe_val
+        raw_demand[entity] = max(act, pred)
 
-    supplied = {entity: 0.0 for entity in PRIORITY}
+    # --- Step 1: Apply time caps ---
+    capped_demand, freed_mw, cap_notes = apply_time_caps(raw_demand, hour)
+
+    # --- Step 2: Redistribute freed power ---
+    demand, redir_notes = redistribute_freed_power(capped_demand, freed_mw, hour)
+
+    total_demand = sum(demand.values())
+
+    supplied = {entity: demand[entity] for entity in PRIORITY}
     battery_delta = 0.0
     deficit = 0.0
-    actions = []
+    actions = list(cap_notes) + list(redir_notes)
 
-    # 1. Provide power exactly according to demand (optimistic baseline)
-    for entity in PRIORITY:
-        supplied[entity] = demand[entity]
+    # --- Step 3: Peak-hour proactive battery boost ---
+    peak_boost_active = False
+    if _is_peak_hour(hour) and battery_energy > PEAK_BATTERY_BOOST_MW:
+        boost = min(PEAK_BATTERY_BOOST_MW, battery_energy * 0.3)
+        battery_delta -= boost
+        peak_boost_active = True
+        # Increase residential supply during evening, industry in morning
+        if 18.0 <= hour < 21.0:
+            supplied["residential"] = min(supplied["residential"] + boost,
+                                          raw_demand["residential"] * 1.15)
+            actions.append(
+                f"[PEAK] Evening peak (18-21h): battery discharging "
+                f"{round(boost,1)} MW -> Residential boost."
+            )
+        elif 8.0 <= hour < 9.0:
+            supplied["industry"] = min(supplied["industry"] + boost,
+                                       raw_demand["industry"] * 1.15)
+            actions.append(
+                f"[PEAK] Morning peak (08-09h): battery discharging "
+                f"{round(boost,1)} MW -> Industry boost."
+            )
 
-    # 2. Check Deficit vs Excess
-    if total_demand <= MAX_GRID_CAPACITY:
-        # EXCESS POWER: Charge battery
-        excess = MAX_GRID_CAPACITY - total_demand
+    # --- Step 4: Standard surplus/deficit balancing ---
+    current_total = sum(supplied.values())
+
+    if current_total <= MAX_GRID_CAPACITY:
+        excess = MAX_GRID_CAPACITY - current_total
         to_charge = min(excess, BATTERY_MAX_RATE, BATTERY_MAX_CHARGE - battery_energy)
-        if to_charge > 0:
+        if battery_delta == 0 and to_charge > 1.0:
             battery_delta = to_charge
-            actions.append(f"Grid stable. Charging battery by {round(to_charge, 1)} MW.")
-        else:
+            actions.append(f"Grid stable. Charging battery by {round(to_charge,1)} MW.")
+        elif battery_delta == 0:
             actions.append("Grid stable. Battery full.")
     else:
-        # DEFICIT POWER: Need to shed or use battery
-        deficit = total_demand - MAX_GRID_CAPACITY
-        
-        # Try battery first
-        from_battery = min(deficit, BATTERY_MAX_RATE, battery_energy)
-        if from_battery > 0:
-            battery_delta = -from_battery
-            deficit -= from_battery
-            actions.append(f"Discharging battery by {round(from_battery, 1)} MW to bridge gap.")
-            
-        # If still deficit, start shedding lowest priority (reverse of PRIORITY list)
+        deficit = current_total - MAX_GRID_CAPACITY
+
+        # Try battery discharge first (if not already in peak boost)
+        if battery_delta >= 0:
+            from_battery = min(deficit, BATTERY_MAX_RATE, battery_energy)
+            if from_battery > 0:
+                battery_delta = -from_battery
+                deficit -= from_battery
+                actions.append(
+                    f"Discharging battery {round(from_battery,1)} MW to bridge deficit."
+                )
+
+        # Priority shedding as last resort
         for entity in reversed(PRIORITY):
             if deficit <= 0.01:
                 break
-                
             if entity == "hospital":
-                actions.append("🚨 CRITICAL: Cannot shed Hospital. Grid overload imminent!")
+                actions.append("CRITICAL: Cannot shed Hospital. Grid overload!")
                 break
-            
             can_shed = supplied[entity]
             if can_shed > 0:
-                shed_amount = min(can_shed, deficit)
-                supplied[entity] -= shed_amount
-                deficit -= shed_amount
-                pct = int((shed_amount / demand[entity]) * 100) if demand[entity] > 0 else 0
-                actions.append(f"⚠️ Shedding {pct}% ({round(shed_amount, 1)} MW) from {entity.capitalize()}.")
+                shed = min(can_shed, deficit)
+                supplied[entity] -= shed
+                deficit -= shed
+                pct = int((shed / demand[entity]) * 100) if demand[entity] > 0 else 0
+                actions.append(
+                    f"Shedding {pct}% ({round(shed,1)} MW) from "
+                    f"{ENTITY_SCHEDULES[entity]['label']}."
+                )
 
-    # Determine status color for frontend
+    # --- Status code ---
     if deficit > 0.1:
         status_code = "CRITICAL"
     elif battery_delta < 0 or any("Shedding" in a for a in actions):
         status_code = "WARNING"
+    elif peak_boost_active:
+        status_code = "PEAK"
     else:
         status_code = "NORMAL"
 
@@ -90,8 +281,12 @@ def optimize_grid(actual_loads: dict, predicted_loads: dict, battery_energy: flo
         "actions": actions,
         "demand": {k: round(v, 2) for k, v in demand.items()},
         "supplied": {k: round(v, 2) for k, v in supplied.items()},
-        "total_demand": round(total_demand, 2),
+        "total_demand": round(sum(demand.values()), 2),
         "total_supplied": round(sum(supplied.values()), 2),
         "battery_energy": round(new_battery, 2),
-        "battery_delta": round(battery_delta, 2)
+        "battery_delta": round(battery_delta, 2),
+        "peak_boost_active": peak_boost_active,
+        "freed_mw": round(freed_mw, 2),
+        "schedule_status": get_entity_schedule_status(hour),
+        "simulated_hour": round(hour, 2),
     }

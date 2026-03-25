@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 from langchain_core.tools import tool, BaseTool
-from langchain_community.llms import Ollama
+from langchain_ollama import OllamaLLM
 from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
 
@@ -31,7 +31,7 @@ from pydantic import BaseModel, Field
 class OllamaConfig(BaseModel):
     """Configuration for remote Ollama instance"""
     endpoint: str = Field(default_factory=lambda: os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434"))
-    model_name: str = Field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "mistral"))
+    model_name: str = Field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "gemma3:1b"))
     
     def update(self, endpoint: Optional[str] = None, model_name: Optional[str] = None):
         """Update configuration at runtime"""
@@ -551,14 +551,14 @@ class GridAgent:
     def _initialize_agent(self):
         """Initialize the Ollama LLM"""
         try:
-            self.llm = Ollama(
+            self.llm = OllamaLLM(
                 base_url=self.config.endpoint,
                 model=self.config.model_name,
                 temperature=0.3  # Lower temp for deterministic decisions
             )
-            print(f"✓ Grid Agent initialized with {self.config.model_name} at {self.config.endpoint}")
+            print(f"[OK] Grid Agent initialized with {self.config.model_name} at {self.config.endpoint}")
         except Exception as e:
-            print(f"✗ Failed to initialize Grid Agent: {e}")
+            print(f"[ERR] Failed to initialize Grid Agent: {e}")
             self.llm = None
     
     def reconfigure(self, endpoint: Optional[str] = None, model_name: Optional[str] = None):
@@ -566,39 +566,86 @@ class GridAgent:
         self.config.update(endpoint, model_name)
         self._initialize_agent()
     
-    def _build_context(self, grid_state: Dict[str, Any]) -> str:
-        """Build a comprehensive context string for the LLM"""
+    def _build_context(self, grid_state: dict) -> str:
+        """Build a comprehensive context string for the LLM, including time-aware schedule info."""
         thermal_status = thermal_mgr.get_thermal_status()
         energy_status = energy_pool.get_status()
         reserve_status = reserve_mgr.check_reserve_adequacy(
             grid_state.get("total_demand", 0),
             grid_state.get("total_supply", 0)
         )
-        
+
+        hour = grid_state.get("simulated_hour", 12.0)
+        h = int(hour)
+        m = int((hour % 1) * 60)
+        time_str = f"{h:02d}:{m:02d}"
+
+        # Build schedule block
+        schedule = grid_state.get("schedule_status", {})
+        schedule_lines = []
+        for entity, info in schedule.items():
+            status = "ACTIVE" if info.get("active") else "STANDBY"
+            cap = info.get("cap_pct", 100)
+            reason = info.get("reason", "")
+            schedule_lines.append(f"  {entity.capitalize():14} [{status}] {cap}% cap — {reason}")
+        schedule_block = "\n".join(schedule_lines) if schedule_lines else "  (no schedule data)"
+
+        peak = "YES — Battery boost engaged!" if grid_state.get("peak_boost_active") else "No"
+        freed = grid_state.get("freed_mw", 0)
+
+        # Per-entity demand/supply
+        demand_by = grid_state.get("demand_by_entity", {})
+        supplied_by = grid_state.get("supplied_by_entity", {})
+        entity_lines = []
+        for entity in ["hospital", "school", "industry", "residential"]:
+            d = demand_by.get(entity, 0)
+            s = supplied_by.get(entity, 0)
+            entity_lines.append(f"  {entity.capitalize():14} demand={d:.1f}MW  supplied={s:.1f}MW")
+        entity_block = "\n".join(entity_lines) if entity_lines else "  (no entity data)"
+
+        recent_actions = grid_state.get("recent_actions", [])
+        actions_block = "\n".join(f"  - {a}" for a in recent_actions[-6:]) if recent_actions else "  (none)"
+
         context = f"""
-CURRENT GRID STATE:
-==================
-Temperature: {thermal_status['current_temp_celsius']}°C (Max Safe: {thermal_status['max_safe_temp']}°C)
-Status: {thermal_status['status']}
+SMART GRID STATUS — Simulated Time: {time_str}
+===============================================
 
-Energy Sources:
-- Renewable Available: {energy_status['total_renewable_available']:.1f} MW
-- Non-Renewable Available: {energy_status['total_nonrenewable_available']:.1f} MW
-- Total Capacity: {energy_status['total_capacity']:.1f} MW
-- Current Output: {energy_status['total_output']:.1f} MW
+THERMAL:
+  Temperature  : {thermal_status['current_temp_celsius']}C (Max Safe: {thermal_status['max_safe_temp']}C)
+  Status       : {thermal_status['status']}
 
-Demand & Supply:
-- Current Demand: {grid_state.get('total_demand', 0):.1f} MW
-- Current Supply: {grid_state.get('total_supply', 0):.1f} MW
-- Predicted Demand: {grid_state.get('predicted_demand', 0):.1f} MW
+ENERGY SOURCES:
+  Renewable Available    : {energy_status['total_renewable_available']:.1f} MW
+  Non-Renewable Available: {energy_status['total_nonrenewable_available']:.1f} MW
+  Total Capacity         : {energy_status['total_capacity']:.1f} MW
+  Current Output         : {energy_status['total_output']:.1f} MW
 
-Reserves:
-- Reserve Needed: {reserve_status['reserve_needed_mw']:.1f} MW
-- Reserve Available: {reserve_status['reserve_available_mw']:.1f} MW
-- Reserve Adequate: {reserve_status['reserve_adequate']}
-- Backup Fuel: {reserve_status['backup_fuel_days']} days
+DEMAND & SUPPLY:
+  Total Demand  : {grid_state.get('total_demand', 0):.1f} MW
+  Total Supplied: {grid_state.get('total_supply', 0):.1f} MW
+  Predicted     : {grid_state.get('predicted_demand', 0):.1f} MW
+  Battery Level : {grid_state.get('battery_energy', 0):.1f} MW
+  Freed by sched: {freed:.1f} MW (redistributed to active zones)
+
+PER-ENTITY BREAKDOWN:
+{entity_block}
+
+TIME-AWARE SCHEDULE (current hour = {time_str}):
+{schedule_block}
+
+PEAK HOUR BATTERY BOOST: {peak}
+
+RESERVES:
+  Needed   : {reserve_status['reserve_needed_mw']:.1f} MW
+  Available: {reserve_status['reserve_available_mw']:.1f} MW
+  Adequate : {reserve_status['reserve_adequate']}
+  Fuel Days: {reserve_status['backup_fuel_days']}
+
+RECENT OPTIMIZER ACTIONS:
+{actions_block}
 """
         return context
+
     
     def make_decision(self, grid_state: Dict[str, Any], query: str) -> Dict[str, Any]:
         """
@@ -622,18 +669,10 @@ Reserves:
         
         prompt = f"""{context}
 
-TASK:
+OPERATOR QUERY:
 {query}
 
-Please provide a detailed analysis and recommendation for managing the grid. Consider:
-1. Current thermal constraints
-2. Energy source availability and efficiency
-3. Reserve adequacy
-4. Load prioritization based on criticality
-5. Environmental impact (CO2)
-6. Cost optimization
-
-Provide your response in a structured format with clear recommendations."""
+You are the Smart Grid AI. Using the exact time, entity schedules, and grid data above, give a concise, direct recommendation. Reference specific entities, MWs, and times. Explain WHY each action makes sense given the hour and load profiles. Format with clear bullet points."""
         
         try:
             # Call Ollama LLM
@@ -667,7 +706,7 @@ def create_grid_agent(endpoint: Optional[str] = None, model_name: Optional[str] 
     """Factory function to create a GridAgent with optional config"""
     config = OllamaConfig(
         endpoint=endpoint or os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434"),
-        model_name=model_name or os.getenv("OLLAMA_MODEL", "mistral")
+        model_name=model_name or os.getenv("OLLAMA_MODEL", "gemma3:1b")
     )
     return GridAgent(config)
 
