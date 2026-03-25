@@ -17,8 +17,8 @@ import paho.mqtt.client as mqtt
 
 BROKER = "broker.hivemq.com"
 PORT = 1883
-TOPIC_PUB = "iegms/syntaxed/grid/data"
-TOPIC_SYNC = "iegms/syntaxed/grid/time_sync"
+TOPIC_PUB = "grid/data"
+TOPIC_SYNC = "grid/time_sync"
 PUBLISH_INTERVAL = 2  # seconds
 
 # Global simulated time in hours (0.0 to 24.0)
@@ -26,11 +26,12 @@ simulated_hour = 0.0
 _lock = threading.Lock()
 
 # Define the base curves so the simulator generates realistic noise around the expected ML value
+# Time-based activity patterns to match real-world scenarios
 PROFILES = {
-    "hospital": {0: 80, 6: 85, 12: 100, 18: 95, 24: 80},
-    "school": {0: 1, 6: 5, 8: 90, 12: 110, 15: 85, 18: 15, 24: 1},
-    "industry": {0: 5, 5: 15, 7: 150, 12: 160, 17: 140, 19: 30, 24: 5},
-    "residential": {0: 40, 6: 70, 9: 50, 15: 60, 18: 150, 21: 180, 24: 40}
+    "hospital": {0: 78, 6: 82, 12: 105, 18: 95, 24: 78},
+    "school": {0: 8, 6: 12, 7: 15, 8: 95, 12: 125, 15: 100, 17: 25, 18: 20, 24: 8},
+    "industry": {0: 25, 5: 30, 6: 140, 12: 165, 13: 155, 18: 60, 19: 40, 24: 25},
+    "residential": {0: 35, 6: 65, 8: 70, 9: 50, 15: 50, 18: 155, 21: 190, 23: 80, 24: 35}
 }
 
 def _interpolate(hour: float, curve: dict) -> float:
