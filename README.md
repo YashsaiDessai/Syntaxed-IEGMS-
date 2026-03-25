@@ -1,6 +1,6 @@
 # ⚡ Syntaxed-IEGMS (Intelligent Energy Grid Management System)
 
-> **Quantexera Hackathon 2026** · Real-time grid monitoring + ML prediction + optimization dashboard
+> **Quantexera Hackathon 2026** · Real-time grid monitoring + ML prediction + optimization dashboard + **AI Agent**
 
 ### Team members:
 - Prashant Goundadkar
@@ -14,20 +14,21 @@
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────┐     MQTT (test.mosquitto.org)     ┌─────────────────────┐
+┌─────────────────────┐     MQTT (broker.hivemq.com)      ┌─────────────────────┐
 │   IoT Simulator     │  ──────────────────────────────►  │   FastAPI Backend   │
-│  simulator.py       │      topic: grid/data              │   main.py           │
+│  simulator.py       │   topic: iegms/syntaxed/grid/data  │   main.py           │
 │  (publishes every   │                                    │   mqtt_client.py    │
-│   2 seconds)        │                                    │   ml_model.py       │
-└─────────────────────┘                                    │   optimizer.py      │
+│   2 seconds)        │ ◄───────────────────────────────   │   ml_model.py       │
+│                     │   topic: .../time_sync             │   optimizer.py      │
+└─────────────────────┘                                    │   agent_orchestrator│
                                                            └──────────┬──────────┘
                                                                       │ REST API
                                                                       │ (HTTP polling)
                                                            ┌──────────▼──────────┐
-                                                           │   Frontend          │
+                                                           │   Frontend (3D)     │
                                                            │   index.html        │
                                                            │   app.js / style.css│
-                                                           │   Chart.js          │
+                                                           │   Three.js          │
                                                            └─────────────────────┘
 ```
 
@@ -36,17 +37,21 @@
 ```
 project-root/
 ├── backend/
-│   ├── main.py          ← FastAPI server (API endpoints)
-│   ├── mqtt_client.py   ← MQTT subscriber + in-memory store
-│   ├── ml_model.py      ← Linear regression load predictor
-│   ├── optimizer.py     ← Peak load optimization logic
-│   └── requirements.txt
+│   ├── main.py                   ← FastAPI server (with AI agent endpoints)
+│   ├── agent_orchestrator.py     ← AI Grid Agent (Ollama/LangChain, optional)
+│   ├── mqtt_client.py            ← MQTT subscriber + in-memory store
+│   ├── ml_model.py               ← Linear interpolation load predictor
+│   ├── optimizer.py              ← Priority load shedding + battery logic
+│   ├── test_agent.py             ← AI agent test suite
+│   ├── example_client.py         ← Example API client
+│   ├── requirements.txt          ← Dependencies
+│   └── .env.example              ← Configuration template
 ├── simulator/
-│   └── simulator.py     ← IoT load data publisher (MQTT)
+│   └── simulator.py              ← IoT load data publisher (MQTT)
 ├── frontend/
-│   ├── index.html       ← Dashboard UI
-│   ├── app.js           ← Chart.js + API polling
-│   └── style.css        ← Dark-mode glassmorphism design
+│   ├── index.html                ← 3D Simulation UI
+│   ├── app.js                    ← Three.js scene + API polling
+│   └── style.css                 ← Dark-mode glassmorphism design
 └── README.md
 ```
 
@@ -68,7 +73,7 @@ cd backend
 python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The API will be available at `http://localhost:8000`  
+The API will be available at `http://localhost:8000`
 Interactive docs: `http://localhost:8000/docs`
 
 ### 3. Start the IoT Simulator (Terminal 2)
@@ -82,53 +87,83 @@ The simulator publishes a new grid reading every **2 seconds** via MQTT.
 
 ### 4. Open the Frontend
 
-Simply open `frontend/index.html` in your browser, or run `. . . /frontend> python -m http.server 3000` and visit `http://localhost:3000`.
+```bash
+cd frontend
+python -m http.server 3000
+# Visit http://localhost:3000
+```
 
 The dashboard auto-refreshes every 2 seconds.
 
 ---
 
-## 🔌 API Endpoints
+## 🤖 AI Agent (Optional)
+
+An **Ollama + LangChain-powered AI agent** is included for intelligent grid management decisions.
+
+### Setup
+
+1. Install optional dependencies:
+```bash
+pip install langchain langchain-community ollama
+```
+
+2. Run Ollama on a machine (locally or remote):
+```bash
+ollama serve
+ollama pull mistral
+```
+
+3. Configure the endpoint:
+```env
+# backend/.env
+OLLAMA_ENDPOINT=http://localhost:11434
+OLLAMA_MODEL=mistral
+```
+
+### AI Agent Endpoints
+
+| Method | Endpoint           | Description                     |
+|--------|-------------------|---------------------------------|
+| POST   | `/agent/configure` | Configure Ollama endpoint/model |
+| GET    | `/agent/config`    | Get agent configuration         |
+| POST   | `/agent/decide`    | Request AI grid decision        |
+| GET    | `/agent/status`    | Get agent status & analysis     |
+
+---
+
+## 🔌 Grid API Endpoints
 
 | Method | Endpoint      | Description                                  |
 |--------|---------------|----------------------------------------------|
 | GET    | `/health`     | Health check                                 |
 | GET    | `/data`       | Last 20 MQTT grid readings                   |
-| GET    | `/prediction` | ML-predicted next load value                 |
-| GET    | `/optimize`   | Optimization decision + cost-saving estimate |
+| GET    | `/optimize`   | Optimization decision + battery/shed status  |
+| POST   | `/set_time`   | Jump simulation to a specific hour           |
 | GET    | `/docs`       | Interactive Swagger UI                       |
-
----
-
-## 🤖 ML Model
-
-- **Algorithm**: Linear regression (`numpy.polyfit`-style pure python implementation)
-- **Input**: Rolling window of up to 20 recent load readings
-- **Output**: Predicted next load value (MW)
-- **Rationale**: Simple, fast, explainable — ideal for a hackathon demo
 
 ---
 
 ## ⚡ Optimization Logic
 
-| Condition                        | Status              | Action                                  |
-|----------------------------------|---------------------|-----------------------------------------|
-| Load ≤ 120 MW                    | ✅ Normal           | No intervention needed                  |
-| 120 MW < Load ≤ 150 MW           | ⚠️ High Load        | Activate demand response / reduce load  |
-| Load > 150 MW                    | 🚨 Critical Overload | Shed load + discharge battery storage   |
+| Condition                     | Status          | Action                                  |
+|-------------------------------|------------------|-----------------------------------------|
+| Load ≤ 900 MW                 | ✅ Normal        | Charge battery with excess              |
+| Load > 900 MW (battery helps) | ⚠️ Warning       | Discharge battery, alert                |
+| Load > 900 MW (still deficit) | 🚨 Critical      | Shed by priority (Residential → School) |
 
-**Cost saving estimate** = excess load × $0.12/unit
+**Priority**: Hospital > School > Industry > Residential
 
 ---
 
 ## 🎯 Demo Script (For Judges)
 
-1. **Open the dashboard** — show the live load graph updating in real-time
-2. **Point out the ML prediction** — the dashed yellow line forecasts the next reading
-3. **Wait for or explain a spike** — the simulator has a ~12% chance of a spike per reading
-4. **Show the alert banner** — appears automatically when load exceeds 120 MW
-5. **Highlight the optimization decision** — explains the exact action the grid should take
-6. **Cost savings card** — quantifies the economic benefit of the intervention
+1. **Open the 3D dashboard** — live voxel city with real-time telemetry
+2. **Drag the Time Slider** — watch buildings light up/dim as day turns to night
+3. **Power Plants** — two plants feed the grid battery via blue supply lines
+4. **Orchestrator Log** — AI takes live shedding decisions every 2 seconds
+5. **Battery Meter** — charges when excess grid power, discharges on peak demand
+6. **Status badge** — NORMAL → WARNING → CRITICAL as load increases
 
 ---
 
@@ -137,9 +172,10 @@ The dashboard auto-refreshes every 2 seconds.
 | Layer         | Technology                        |
 |---------------|-----------------------------------|
 | Backend       | Python 3.11+, FastAPI, Uvicorn    |
-| ML            | Python custom linear regression   |
+| ML            | Custom time-interpolation model   |
+| AI Agent      | LangChain + Ollama (optional)     |
 | IoT Transport | MQTT via paho-mqtt                |
 | MQTT Broker   | broker.hivemq.com (public)        |
-| Frontend      | HTML5, Vanilla JS, Chart.js 4     |
+| Frontend 3D   | HTML5, Three.js r128              |
 | Styling       | Vanilla CSS (dark glassmorphism)  |
 | Storage       | In-memory deque (no DB required)  |
